@@ -14,16 +14,23 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>('light');
 
+    // Initialize theme from local storage or system preference before render
   useEffect(() => {
     const storedTheme = window.localStorage.getItem('trackmoco_theme') as Theme | null;
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const initialTheme = storedTheme === 'dark' ? 'dark' : storedTheme === 'light' ? 'light' : prefersDark ? 'dark' : 'light';
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(initialTheme);
-    document.documentElement.dataset.theme = initialTheme;
   }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    // Also toggle the class for CSS support
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
     window.localStorage.setItem('trackmoco_theme', theme);
   }, [theme]);
 
@@ -44,3 +51,5 @@ export function useTheme() {
   }
   return context;
 }
+
+

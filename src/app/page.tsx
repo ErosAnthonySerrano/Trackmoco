@@ -126,7 +126,7 @@ export default function HomePage() {
         {loading ? (
           <div className="space-y-6">
             {[...Array(3)].map((_, index) => (
-              <div key={index} className="rounded-3xl border border-line bg-surface p-6 shadow-sm">
+              <div key={index} className="card p-6">
                 <Skeleton className="h-8 w-48 mb-4" />
                 <Skeleton className="h-5 w-32 mb-4" />
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -138,7 +138,7 @@ export default function HomePage() {
             ))}
           </div>
         ) : installments.length === 0 ? (
-          <div className="flex min-h-[60vh] items-center justify-center rounded-[28px] border border-line bg-surface p-10 text-center shadow-lg">
+          <div className="flex min-h-[60vh] items-center justify-center card p-10 text-center shadow-md">
             <div className="max-w-lg">
               <h2 className="mb-4 text-3xl font-semibold text-ink">No installments yet</h2>
               <p className="mb-6 text-sm leading-7 text-ink-muted">
@@ -152,11 +152,11 @@ export default function HomePage() {
         ) : (
             <div className="space-y-6">
               <DashboardSummary />
-              <div className="flex flex-wrap gap-3 border-b border-line pb-3">
+              <div className="flex flex-wrap gap-2 border-b border-line pb-3">
               <button
                 type="button"
                 onClick={() => setActiveTab('ongoing')}
-                className={`rounded-3xl px-4 py-3 text-sm font-semibold transition ${activeTab === 'ongoing' ? 'bg-accent-soft text-accent' : 'bg-surface text-ink border border-line'}`}
+                className={`rounded-full px-5 py-2 text-sm font-semibold transition ${activeTab === 'ongoing' ? 'bg-accent text-white' : 'bg-surface text-ink border border-line hover:bg-gray-100 dark:hover:bg-gray-800'}`}
               >
                 Ongoing {countBadge(ongoingInstallments.length)}
               </button>
@@ -164,7 +164,7 @@ export default function HomePage() {
                 type="button"
                 onClick={() => setActiveTab('completed')}
                 disabled={completedInstallments.length === 0}
-                className={`rounded-3xl px-4 py-3 text-sm font-semibold transition ${activeTab === 'completed' ? 'bg-accent-soft text-accent' : 'bg-surface text-ink border border-line'} ${completedInstallments.length === 0 ? 'cursor-not-allowed opacity-50' : ''}`}
+                className={`rounded-full px-5 py-2 text-sm font-semibold transition ${activeTab === 'completed' ? 'bg-accent text-white' : 'bg-surface text-ink border border-line hover:bg-gray-100 dark:hover:bg-gray-800'} ${completedInstallments.length === 0 ? 'cursor-not-allowed opacity-50' : ''}`}
               >
                 Completed {countBadge(completedInstallments.length)}
               </button>
@@ -172,7 +172,7 @@ export default function HomePage() {
 
             <div className="grid gap-4">
               {activeInstallments.length === 0 ? (
-                <div className="rounded-3xl border border-line bg-surface p-8 text-center text-sm text-ink-muted">
+                <div className="card p-8 text-center text-sm text-ink-muted">
                   {activeTab === 'ongoing'
                     ? 'No ongoing installments yet. Mark one of your plans as in progress by adding an unpaid item.'
                     : 'No completed installments yet.'}
@@ -185,7 +185,7 @@ export default function HomePage() {
                     <Link
                       key={installment.id}
                       href={`/${installment.id}`}
-                      className="group block rounded-3xl border border-line bg-surface p-6 transition hover:border-accent"
+                      className="group block card p-6 transition hover:shadow-md hover:border-accent"
                     >
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
@@ -210,3 +210,4 @@ export default function HomePage() {
     </main>
   );
 }
+

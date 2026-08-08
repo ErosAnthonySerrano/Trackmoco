@@ -41,15 +41,22 @@ export function AppHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-bg/90 backdrop-blur-xl">
-      <div className="mx-auto flex flex-wrap items-center justify-end gap-3 px-4 py-3">
-        <NotificationBell />
-        <ThemeToggle />
-        <Link href="/installments" className="inline-flex rounded-2xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-ink transition hover:bg-accent-soft">
-          Add installment
-        </Link>
-        <Button type="button" onClick={handleSignOut} isLoading={signOutLoading}>
-          {signOutLoading ? 'Signing out…' : 'Sign out'}
-        </Button>
+      <div className='flex justify-center'>
+        <div className="flex w-full max-w-6xl items-center justify-between py-3">
+          <Link href="/" className="inline-flex items-center rounded-2xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-ink transition hover:bg-accent-soft">
+            Trackmoco
+          </Link>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <NotificationBell />
+            <ThemeToggle />
+            <Link href="/installments" className="inline-flex rounded-2xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-ink transition hover:bg-accent-soft">
+              Add installment
+            </Link>
+            <Button type="button" onClick={handleSignOut} isLoading={signOutLoading}>
+              {signOutLoading ? 'Signing out…' : 'Sign out'}
+            </Button>
+          </div>
+        </div>
       </div>
     </header>
   );

@@ -106,8 +106,6 @@ export default function InstallmentDetailPage() {
             <h1 className="text-4xl font-semibold">{installment?.title ?? 'Loading...'}</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <NotificationBell />
-            <ThemeToggle />
             {userRole !== 'viewer' ? (
               <Button type="button" variant="secondary" onClick={() => setShareOpen(true)}>
                 Share
@@ -138,66 +136,66 @@ export default function InstallmentDetailPage() {
           </div>
         ) : (
           <div className="space-y-8">
-            <div className="flex flex-wrap gap-3 border-b border-line pb-3">
+                        <div className="flex flex-wrap gap-2 border-b border-line pb-3">
               <button
                 type="button"
                 onClick={() => setActiveTab('in-progress')}
-                className={`rounded-3xl px-4 py-3 text-sm font-semibold transition ${activeTab === 'in-progress' ? 'bg-accent-soft text-accent' : 'bg-surface text-ink border border-line'}`}
+                className={`rounded-full px-5 py-2 text-sm font-semibold transition ${activeTab === 'in-progress' ? 'bg-accent text-white' : 'bg-surface text-ink border border-line hover:bg-gray-100 dark:hover:bg-gray-800'}`}
               >
                 In Progress ({inProgress.length})
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('paid')}
-                className={`rounded-3xl px-4 py-3 text-sm font-semibold transition ${activeTab === 'paid' ? 'bg-accent-soft text-accent' : 'bg-surface text-ink border border-line'}`}
+                className={`rounded-full px-5 py-2 text-sm font-semibold transition ${activeTab === 'paid' ? 'bg-accent text-white' : 'bg-surface text-ink border border-line hover:bg-gray-100 dark:hover:bg-gray-800'}`}
               >
                 Paid ({paidItems.length})
               </button>
             </div>
 
             {activeItems.length === 0 ? (
-              <div className="rounded-3xl border border-line bg-surface p-10 text-center text-sm text-ink-muted">
+              <div className="card p-10 text-center text-sm text-ink-muted">
                 {activeTab === 'in-progress'
                   ? 'No unpaid items yet.'
                   : 'No paid items yet.'}
               </div>
             ) : (
               <>
-                <div className="hidden sm:block rounded-3xl border border-line bg-surface overflow-hidden">
+                <div className="hidden sm:block card overflow-hidden">
                   <table className="w-full border-collapse text-left text-sm">
-                    <thead className="bg-bg">
+                    <thead className="bg-gray-50 dark:bg-gray-900 text-ink-muted">
                       <tr>
-                        <th className="border-b border-line px-4 py-4">Item</th>
-                        <th className="border-b border-line px-4 py-4">Due date</th>
-                        <th className="border-b border-line px-4 py-4">Status</th>
-                        <th className="border-b border-line px-4 py-4">Proof</th>
-                        <th className="border-b border-line px-4 py-4">Action</th>
+                        <th className="px-6 py-4 font-medium">Item</th>
+                        <th className="px-6 py-4 font-medium">Due date</th>
+                        <th className="px-6 py-4 font-medium">Status</th>
+                        <th className="px-6 py-4 font-medium">Proof</th>
+                        <th className="px-6 py-4 font-medium text-right">Action</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-line">
                       {activeItems.map((item) => (
-                        <tr key={item.id} className="border-b border-line last:border-b-0 hover:bg-accent-soft/60 transition">
-                          <td className="px-4 py-4 align-top text-ink">{item.label}</td>
-                          <td className="px-4 py-4 align-top text-ink-muted">{formatDate(item.due_date)}</td>
-                          <td className="px-4 py-4 align-top">
-                            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${item.status === 'paid' ? 'bg-success-soft text-success' : 'bg-surface text-ink border border-line'}`}>
+                        <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition">
+                          <td className="px-6 py-4 text-ink font-medium">{item.label}</td>
+                          <td className="px-6 py-4 text-ink-muted">{formatDate(item.due_date)}</td>
+                                                    <td className="px-6 py-4">
+                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${item.status === 'paid' ? 'bg-success/10 text-success' : 'bg-gray-100 dark:bg-gray-800 text-ink dark:text-ink-muted'}`}>
                               {item.status === 'paid' ? 'Paid' : 'Unpaid'}
                             </span>
                           </td>
-                          <td className="px-4 py-4 align-top">
+                          <td className="px-6 py-4">
                             {item.proof_files && item.proof_files.length > 0 ? (
                               <button
                                 type="button"
                                 onClick={() => setProofItem(item)}
-                                className="rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent"
+                                className="text-accent font-medium hover:underline"
                               >
-                                Proof ({item.proof_files.length})
+                                {item.proof_files.length} file{item.proof_files.length > 1 ? 's' : ''}
                               </button>
                             ) : (
-                              <span className="text-sm text-ink-muted">—</span>
+                              <span className="text-ink-muted">—</span>
                             )}
                           </td>
-                          <td className="px-4 py-4 align-top">
+                          <td className="px-6 py-4 text-right">
                             <Button type="button" variant="secondary" onClick={() => setOpenItem(item)}>
                               Edit
                             </Button>
@@ -210,13 +208,13 @@ export default function InstallmentDetailPage() {
 
                 <div className="space-y-4 sm:hidden">
                   {activeItems.map((item) => (
-                    <div key={item.id} className="rounded-3xl border border-line bg-surface p-5">
+                    <div key={item.id} className="card p-5">
                       <div className="mb-4 flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-ink">{item.label}</p>
+                          <p className="font-semibold text-ink">{item.label}</p>
                           <p className="mt-1 text-sm text-ink-muted">Due {formatDate(item.due_date)}</p>
                         </div>
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${item.status === 'paid' ? 'bg-success-soft text-success' : 'bg-surface text-ink border border-line'}`}>
+                                                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${item.status === 'paid' ? 'bg-success/10 text-success' : 'bg-gray-100 dark:bg-gray-800 text-ink dark:text-ink-muted'}`}>
                           {item.status === 'paid' ? 'Paid' : 'Unpaid'}
                         </span>
                       </div>
@@ -225,20 +223,20 @@ export default function InstallmentDetailPage() {
                           <button
                             type="button"
                             onClick={() => setProofItem(item)}
-                            className="rounded-2xl bg-accent-soft px-4 py-3 text-sm font-semibold text-accent"
+                            className="rounded-xl bg-accent-soft p-3 text-sm font-semibold text-accent text-center"
                           >
-                            Proof ({item.proof_files.length})
+                            View Proof ({item.proof_files.length})
                           </button>
                         ) : null}
-                        <Button type="button" variant="secondary" onClick={() => setOpenItem(item)}>
-                          Action
+                        <Button type="button" variant="secondary" onClick={() => setOpenItem(item)} className="w-full">
+                          Edit Item
                         </Button>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-line bg-surface px-4 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 card px-6 py-4">
                   <p className="text-sm text-ink-muted">
                     Page {activeTab === 'in-progress' ? pageInProgress : pagePaid} of {pageCount}
                   </p>
@@ -360,3 +358,4 @@ export default function InstallmentDetailPage() {
     </main>
   );
 }
+

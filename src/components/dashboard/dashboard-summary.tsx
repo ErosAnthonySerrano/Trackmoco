@@ -38,14 +38,14 @@ type StatCardProps = {
 
 function StatCard({ icon, label, value, sublabel, danger, accent }: StatCardProps) {
   return (
-    <div className={`rounded-3xl border p-5 shadow-sm ${danger ? 'border-danger/30 bg-danger-soft/40' : 'border-line bg-surface'}`}>
-      <div className="flex items-center gap-2">
-        <span className={`inline-flex h-8 w-8 items-center justify-center rounded-2xl ${danger ? 'bg-danger-soft text-danger' : accent ? 'bg-accent-soft text-accent' : 'bg-surface text-ink border border-line'}`}>
+    <div className={`card p-5 ${danger ? 'border-danger/20' : ''}`}>
+      <div className="flex items-center gap-3">
+        <span className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${danger ? 'bg-danger-soft text-danger' : accent ? 'bg-accent-soft text-accent' : 'bg-gray-100 dark:bg-gray-800 text-ink'}`}>
           {icon}
         </span>
         <p className="text-sm font-medium text-ink-muted">{label}</p>
       </div>
-      <p className={`mt-3 text-2xl font-semibold ${danger ? 'text-danger' : 'text-ink'}`}>
+      <p className={`mt-4 text-3xl font-bold ${danger ? 'text-danger' : 'text-ink'}`}>
         {value}
       </p>
       {sublabel ? <p className="mt-1 text-xs text-ink-muted">{sublabel}</p> : null}
@@ -201,12 +201,14 @@ export function DashboardSummary() {
           icon={<CheckCircle2 className="h-4 w-4" />}
           label="Total paid"
           value={formatAmount(summary.total_paid)}
+          accent
         />
         <StatCard
           icon={<Clock className="h-4 w-4" />}
           label="Due this week"
           value={formatAmount(summary.due_this_week.amount)}
           sublabel={`${summary.due_this_week.count} item${summary.due_this_week.count === 1 ? '' : 's'} due in the next 7 days`}
+          accent
         />
         {summary.overdue_count > 0 ? (
           <StatCard
@@ -219,12 +221,12 @@ export function DashboardSummary() {
         ) : null}
       </div>
 
-      <div className="rounded-3xl border border-line bg-surface p-5 shadow-sm">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-ink">Upcoming payments</h2>
+      <div className="card p-5">
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-ink">Upcoming payments</h2>
           {summary.upcoming.length > 0 ? (
             <Link
-              href="/"
+              href="/installments"
               className="inline-flex items-center gap-1 text-sm font-semibold text-accent transition hover:underline"
             >
               View all
@@ -234,16 +236,16 @@ export function DashboardSummary() {
         </div>
 
         {summary.upcoming.length === 0 ? (
-          <p className="rounded-2xl border border-line bg-bg px-4 py-6 text-center text-sm text-ink-muted">
+          <p className="rounded-xl border border-dashed border-line bg-bg px-4 py-8 text-center text-sm text-ink-muted">
             No upcoming payments &mdash; you are all caught up.
           </p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {summary.upcoming.map((item) => (
               <li key={item.item_id}>
                 <Link
                   href={`/${item.installment_id}`}
-                  className="flex items-center justify-between gap-4 rounded-2xl border border-line bg-bg p-3 transition hover:border-accent"
+                  className="flex items-center justify-between gap-4 rounded-xl border border-line bg-bg p-4 transition hover:border-accent hover:bg-accent-soft/30"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-ink">
@@ -254,7 +256,7 @@ export function DashboardSummary() {
                       Due {format(parseISO(item.due_date), 'MMM d, yyyy')}
                     </p>
                   </div>
-                  <p className="shrink-0 text-sm font-semibold text-ink">{formatAmount(item.amount)}</p>
+                  <p className="shrink-0 text-sm font-bold text-ink">{formatAmount(item.amount)}</p>
                 </Link>
               </li>
             ))}
