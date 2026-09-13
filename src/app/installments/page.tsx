@@ -1,12 +1,14 @@
 import Link from 'next/link';
+import { BackButton } from '@/components/ui';
 
 export default function InstallmentsLandingPage() {
   return (
-    <main className="min-h-screen bg-bg px-4 py-10">
-      <div className="mx-auto max-w-3xl rounded-3xl bg-surface p-10 shadow-lg">
+    <main className="min-h-screen bg-bg px-4 py-6 sm:py-10">
+      <div className="mx-auto max-w-3xl rounded-3xl bg-surface p-5 shadow-lg sm:p-10">
+        <BackButton href="/" label="Back to dashboard" />
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-semibold text-ink">Create an installment plan</h1>
+            <h1 className="text-2xl font-semibold text-ink sm:text-3xl">Create an installment plan</h1>
             <p className="mt-2 text-sm text-ink-muted">
               Choose the schedule that fits your payments and create the plan with a single due-date pattern.
             </p>

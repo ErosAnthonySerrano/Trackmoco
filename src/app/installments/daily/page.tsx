@@ -5,7 +5,7 @@ import { format, parseISO } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { getDailyRange, toIsoDate } from '@/components/installments/installment-utils';
-import { Button } from '@/components/ui';
+import { BackButton, Button } from '@/components/ui';
 
 const today = toIsoDate(new Date());
 
@@ -43,7 +43,7 @@ export default function DailyInstallmentPage() {
   const selectedCount = days.filter((day) => checkedDays.has(day)).length;
   const itemCount = selectedCount;
   const allSelected = days.length > 0 && selectedCount === days.length;
-  const hasError = !title || !amount || selectedCount === 0 || invalidRange;
+  const hasError = !title.trim() || Number(amount) <= 0 || !Number.isFinite(Number(amount)) || selectedCount === 0 || invalidRange;
   const rangeError = invalidRange ? 'End date must be later than start date.' : null;
 
   const toggleDay = (day: string) => {
@@ -124,10 +124,11 @@ export default function DailyInstallmentPage() {
   };
 
   return (
-    <main className="min-h-screen bg-bg px-4 py-10">
-      <div className="mx-auto max-w-3xl rounded-3xl bg-surface p-10 shadow-lg">
+    <main className="min-h-screen bg-bg px-4 py-6 sm:py-10">
+      <div className="mx-auto max-w-3xl rounded-3xl bg-surface p-5 shadow-lg sm:p-10">
+        <BackButton href="/installments" label="Back to installment types" />
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-ink">Create daily installment</h1>
+          <h1 className="text-2xl font-semibold text-ink sm:text-3xl">Create daily installment</h1>
           <p className="mt-2 text-sm text-ink-muted">Pick a date range and skip any days you don't want included.</p>
         </div>
 
@@ -158,6 +159,9 @@ export default function DailyInstallmentPage() {
               />
             </label>
           </div>
+          {amount && (Number(amount) <= 0 || !Number.isFinite(Number(amount))) ? (
+            <p className="text-sm text-danger">Amount must be a positive number.</p>
+          ) : null}
 
           <div className="grid gap-6 sm:grid-cols-2">
             <label className="block text-sm font-medium text-ink-muted">

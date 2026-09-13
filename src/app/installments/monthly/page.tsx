@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { getFixedMonthlyDates, getMonthRows, getMonthLabel, toIsoDate } from '@/components/installments/installment-utils';
-import { Button } from '@/components/ui';
+import { BackButton, Button, Select } from '@/components/ui';
 
 const today = new Date();
 const defaultStartMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
@@ -51,7 +51,7 @@ export default function MonthlyInstallmentPage() {
   const dates = sameDay ? autoDates : manualDates;
 
   const allSet = dates.length === monthCount && dates.every(Boolean);
-  const hasError = !title || !amount || !allSet;
+  const hasError = !title.trim() || Number(amount) <= 0 || !Number.isFinite(Number(amount)) || !allSet;
 
   const handleManualChange = (index: number, value: string) => {
     setManualDates((current) => {
@@ -125,10 +125,11 @@ export default function MonthlyInstallmentPage() {
   };
 
   return (
-    <main className="min-h-screen bg-bg px-4 py-10">
-      <div className="mx-auto max-w-3xl rounded-3xl bg-surface p-10 shadow-lg">
+    <main className="min-h-screen bg-bg px-4 py-6 sm:py-10">
+      <div className="mx-auto max-w-3xl rounded-3xl bg-surface p-5 shadow-lg sm:p-10">
+        <BackButton href="/installments" label="Back to installment types" />
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-ink">Create monthly installment</h1>
+          <h1 className="text-2xl font-semibold text-ink sm:text-3xl">Create monthly installment</h1>
           <p className="mt-2 text-sm text-ink-muted">Set a monthly schedule with optional fixed due-day clamping.</p>
         </div>
 
@@ -159,6 +160,9 @@ export default function MonthlyInstallmentPage() {
               />
             </label>
           </div>
+          {amount && (Number(amount) <= 0 || !Number.isFinite(Number(amount))) ? (
+            <p className="text-sm text-danger">Amount must be a positive number.</p>
+          ) : null}
 
           <div className="grid gap-6 sm:grid-cols-2">
             <label className="block text-sm font-medium text-ink-muted">
@@ -199,16 +203,14 @@ export default function MonthlyInstallmentPage() {
             {sameDay ? (
               <label className="block text-sm font-medium text-ink-muted">
                 Due day
-                <select
-                  value={anchorDay}
-                  onChange={(event) => setAnchorDay(Number(event.target.value))}
-                  className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
-                >
-                  {Array.from({ length: 31 }, (_, index) => index + 1).map((day) => (
-                    <option key={day} value={day}>{day}</option>
-                  ))}
-                  <option value={32}>Last day of month</option>
-                </select>
+                <Select
+                  value={String(anchorDay)}
+                  onChange={(value) => setAnchorDay(Number(value))}
+                  options={[
+                    ...Array.from({ length: 31 }, (_, index) => ({ value: String(index + 1), label: String(index + 1) })),
+                    { value: '32', label: 'Last day of month' },
+                  ]}
+                />
               </label>
             ) : null}
 

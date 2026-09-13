@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { getFixedYearlyDates, getYearLabel, toIsoDate } from '@/components/installments/installment-utils';
-import { Button } from '@/components/ui';
+import { BackButton, Button, Select } from '@/components/ui';
 
 const today = new Date();
 const defaultStartYear = today.getFullYear();
@@ -50,7 +50,7 @@ export default function YearlyInstallmentPage() {
   const years = Array.from({ length: yearCount }, (_, index) => startYear + index);
   const dates = sameDate ? autoDates : manualDates;
   const allSet = dates.length === yearCount && dates.every(Boolean);
-  const hasError = !title || !amount || !allSet;
+  const hasError = !title.trim() || Number(amount) <= 0 || !Number.isFinite(Number(amount)) || !allSet;
 
   const handleManualChange = (index: number, value: string) => {
     setManualDates((current) => {
@@ -124,10 +124,11 @@ export default function YearlyInstallmentPage() {
   };
 
   return (
-    <main className="min-h-screen bg-bg px-4 py-10">
-      <div className="mx-auto max-w-3xl rounded-3xl bg-surface p-10 shadow-lg">
+    <main className="min-h-screen bg-bg px-4 py-6 sm:py-10">
+      <div className="mx-auto max-w-3xl rounded-3xl bg-surface p-5 shadow-lg sm:p-10">
+        <BackButton href="/installments" label="Back to installment types" />
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-ink">Create yearly installment</h1>
+          <h1 className="text-2xl font-semibold text-ink sm:text-3xl">Create yearly installment</h1>
           <p className="mt-2 text-sm text-ink-muted">Choose yearly payments with optional fixed due dates across years.</p>
         </div>
 
@@ -158,6 +159,9 @@ export default function YearlyInstallmentPage() {
               />
             </label>
           </div>
+          {amount && (Number(amount) <= 0 || !Number.isFinite(Number(amount))) ? (
+            <p className="text-sm text-danger">Amount must be a positive number.</p>
+          ) : null}
 
           <div className="grid gap-6 sm:grid-cols-2">
             <label className="block text-sm font-medium text-ink-muted">
@@ -201,15 +205,11 @@ export default function YearlyInstallmentPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm font-medium text-ink-muted">
                   Month
-                  <select
-                    value={month}
-                    onChange={(event) => setMonth(Number(event.target.value))}
-                    className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
-                  >
-                    {Array.from({ length: 12 }, (_, index) => (
-                      <option key={index + 1} value={index + 1}>{index + 1}</option>
-                    ))}
-                  </select>
+                  <Select
+                    value={String(month)}
+                    onChange={(value) => setMonth(Number(value))}
+                    options={Array.from({ length: 12 }, (_, index) => ({ value: String(index + 1), label: String(index + 1) }))}
+                  />
                 </label>
                 <label className="block text-sm font-medium text-ink-muted">
                   Day

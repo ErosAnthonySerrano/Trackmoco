@@ -25,7 +25,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    // Also toggle the class for CSS support
+    // Keep the class in sync for existing dark: utility classes.
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {

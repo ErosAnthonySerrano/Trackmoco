@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { createClient } from '@/lib/supabase/client';
 import { Button, Skeleton } from '@/components/ui';
@@ -21,12 +21,11 @@ type InstallmentRow = {
   installment_items: InstallmentItem[];
 };
 
-export default function HomePage() {
+function HomePageContent() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [installments, setInstallments] = useState<InstallmentRow[]>([]);
-  const [activeTab, setActiveTab] = useState<'ongoing' | 'completed'>('ongoing');
-  const [signOutLoading, setSignOutLoading] = useState(false);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,15 +65,13 @@ export default function HomePage() {
     [installments]
   );
 
-  const completedInstallments = useMemo(
-    () =>
-      installments.filter((installment) =>
-        installment.installment_items.every((item) => item.status === 'paid')
-      ),
-    [installments]
-  );
-
-  const activeInstallments = activeTab === 'ongoing' ? ongoingInstallments : completedInstallments;
+  useEffect(() => {
+    const focusId = searchParams.get('focus');
+    if (!focusId || loading) return;
+    window.requestAnimationFrame(() => {
+      document.getElementById(`installment-${focusId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, [loading, searchParams]);
 
   const countBadge = (count: number) => (
     <span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent">
@@ -101,25 +98,13 @@ export default function HomePage() {
     return null;
   };
 
-  const handleSignOut = async () => {
-    setSignOutLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signOut();
-    setSignOutLoading(false);
-    if (error) {
-      console.error('Sign out failed', error);
-      return;
-    }
-    router.replace('/login');
-  };
-
   return (
-    <main className="min-h-screen bg-bg px-4 py-10 text-ink">
+    <main className="min-h-screen bg-bg px-4 py-6 text-ink sm:py-10">
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-ink-muted">Installments</p>
-            <h1 className="text-4xl font-semibold">Your plans</h1>
+            <h1 className="text-3xl font-semibold sm:text-4xl">Your plans</h1>
           </div>
         </div>
 
@@ -152,39 +137,29 @@ export default function HomePage() {
         ) : (
             <div className="space-y-6">
               <DashboardSummary />
-              <div className="flex flex-wrap gap-2 border-b border-line pb-3">
-              <button
-                type="button"
-                onClick={() => setActiveTab('ongoing')}
-                className={`rounded-full px-5 py-2 text-sm font-semibold transition ${activeTab === 'ongoing' ? 'bg-accent text-white' : 'bg-surface text-ink border border-line hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-              >
-                Ongoing {countBadge(ongoingInstallments.length)}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('completed')}
-                disabled={completedInstallments.length === 0}
-                className={`rounded-full px-5 py-2 text-sm font-semibold transition ${activeTab === 'completed' ? 'bg-accent text-white' : 'bg-surface text-ink border border-line hover:bg-gray-100 dark:hover:bg-gray-800'} ${completedInstallments.length === 0 ? 'cursor-not-allowed opacity-50' : ''}`}
-              >
-                Completed {countBadge(completedInstallments.length)}
-              </button>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-accent-soft px-5 py-2 text-sm font-semibold text-accent">Ongoing {countBadge(ongoingInstallments.length)}</span>
+                </div>
+                <Link href="/installments/all?from=dashboard" className="text-sm font-semibold text-accent hover:underline">
+                  View all installments
+                </Link>
             </div>
 
-            <div className="grid gap-4">
-              {activeInstallments.length === 0 ? (
+            <div id="installments" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {ongoingInstallments.length === 0 ? (
                 <div className="card p-8 text-center text-sm text-ink-muted">
-                  {activeTab === 'ongoing'
-                    ? 'No ongoing installments yet. Mark one of your plans as in progress by adding an unpaid item.'
-                    : 'No completed installments yet.'}
+                  No ongoing installments yet. Create a plan to start tracking payments.
                 </div>
               ) : (
-                activeInstallments.map((installment) => {
+                ongoingInstallments.map((installment) => {
                   const unpaidCount = installment.installment_items.filter((item) => item.status === 'unpaid').length;
                   const paidCount = installment.installment_items.filter((item) => item.status === 'paid').length;
                   return (
                     <Link
                       key={installment.id}
-                      href={`/${installment.id}`}
+                      id={`installment-${installment.id}`}
+                      href={`/${installment.id}?returnTo=${encodeURIComponent(`/?focus=${installment.id}`)}`}
                       className="group block card p-6 transition hover:shadow-md hover:border-accent"
                     >
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -208,6 +183,40 @@ export default function HomePage() {
         )}
       </div>
     </main>
+  );
+}
+
+function HomePageFallback() {
+  return (
+    <main className="min-h-screen bg-bg px-4 py-6 text-ink sm:py-10">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 space-y-3">
+          <Skeleton className="h-5 w-28" />
+          <Skeleton className="h-10 w-48" />
+        </div>
+        <div className="space-y-6">
+          {[1, 2, 3].map((item) => (
+            <div key={item} className="card p-6">
+              <Skeleton className="mb-4 h-8 w-48" />
+              <Skeleton className="mb-4 h-5 w-32" />
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Skeleton className="h-14 w-full" />
+                <Skeleton className="h-14 w-full" />
+                <Skeleton className="h-14 w-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<HomePageFallback />}>
+      <HomePageContent />
+    </Suspense>
   );
 }
 

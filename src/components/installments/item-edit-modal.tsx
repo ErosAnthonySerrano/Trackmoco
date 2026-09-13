@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, FileText, Trash2, Upload } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/ui';
-import { Button, Modal } from '@/components/ui';
+import { Button, Modal, Select } from '@/components/ui';
 
 type Role = 'owner' | 'editor' | 'viewer';
 
@@ -148,7 +148,7 @@ function ProofGrid({
               <button
                 type="button"
                 onClick={() => proof.file_type === 'image' ? setPreviewProof(proof) : signedUrl ? window.open(signedUrl, '_blank', 'noopener,noreferrer') : null}
-                className="flex aspect-[4/3] w-full items-center justify-center bg-surface text-ink"
+                className="flex aspect-4/3 w-full items-center justify-center bg-surface text-ink"
               >
                 {proof.file_type === 'image' && signedUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -248,6 +248,7 @@ export function ItemEditModal({
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -320,9 +321,13 @@ export function ItemEditModal({
     toast({ title: 'Saved', description: 'Item updated successfully.', variant: 'success' });
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!item) return;
-    if (!window.confirm('Delete this item?')) return;
+    setDeleteOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!item) return;
 
     setSaving(true);
     const supabase = createClient();
@@ -335,6 +340,7 @@ export function ItemEditModal({
     }
 
     onDelete(item.id);
+    setDeleteOpen(false);
     handleClose();
     toast({ title: 'Deleted', description: 'Item removed.', variant: 'success' });
   };
@@ -406,7 +412,8 @@ export function ItemEditModal({
   };
 
   return (
-    <Modal
+    <>
+      <Modal
       open={open}
       title={item?.label ?? ''}
       description="Edit item details, upload proof, or remove the item if you own the installment."
@@ -453,15 +460,12 @@ export function ItemEditModal({
 
           <label className="block text-sm font-medium text-ink-muted">
             Status
-            <select
+            <Select
               value={status}
-              onChange={(event) => updateDraft({ status: event.target.value as 'paid' | 'unpaid' })}
+              onChange={(value) => updateDraft({ status: value as 'paid' | 'unpaid' })}
               disabled={!canEdit}
-              className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="unpaid">Unpaid</option>
-              <option value="paid">Paid</option>
-            </select>
+              options={[{ value: 'unpaid', label: 'Unpaid' }, { value: 'paid', label: 'Paid' }]}
+            />
           </label>
 
           <div className="rounded-3xl border border-line bg-surface p-5">
@@ -478,7 +482,7 @@ export function ItemEditModal({
               ) : (
                 <p className="rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink-muted">No proof files uploaded yet.</p>
               )}
-              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-line bg-bg px-4 py-3 text-sm font-semibold text-ink transition hover:bg-accent-soft has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-line bg-bg px-4 py-3 text-sm font-semibold text-ink transition hover:bg-accent-soft has-disabled:cursor-not-allowed has-disabled:opacity-60">
                 <Upload className="h-4 w-4" />
                 {uploading ? 'Uploading...' : canAddProof ? 'Upload proof' : 'Upload limit reached'}
                 <input
@@ -497,6 +501,35 @@ export function ItemEditModal({
           </div>
         </div>
       ) : null}
-    </Modal>
+      </Modal>
+      <Modal
+        open={deleteOpen}
+        title="Delete item?"
+        description="This removes the payment item permanently. This action cannot be undone."
+        onClose={() => {
+          if (!saving) setDeleteOpen(false);
+        }}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="ghost" disabled={saving} onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="border border-danger/30 text-danger"
+              isLoading={saving}
+              onClick={confirmDelete}
+            >
+              Delete item
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-ink-muted">
+          Are you sure you want to delete <span className="font-semibold text-ink">{item?.label}</span>?
+        </p>
+      </Modal>
+    </>
   );
 }

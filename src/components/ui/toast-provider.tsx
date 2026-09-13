@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, ReactNode, useCallback, useContext, useMemo, useState } from 'react';
-import { X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 import clsx from 'clsx';
 
 type ToastVariant = 'default' | 'success' | 'danger';
@@ -25,11 +25,26 @@ const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 function getVariantStyles(variant: ToastVariant) {
   switch (variant) {
     case 'success':
-      return 'border-success text-success bg-success-soft';
+      return {
+        card: 'border-line bg-surface',
+        rail: 'bg-success',
+        icon: CheckCircle2,
+        iconClass: 'text-success',
+      };
     case 'danger':
-      return 'border-danger text-danger bg-danger-soft';
+      return {
+        card: 'border-line bg-surface',
+        rail: 'bg-danger',
+        icon: AlertCircle,
+        iconClass: 'text-danger',
+      };
     default:
-      return 'border-line text-ink bg-surface';
+      return {
+        card: 'border-line bg-surface',
+        rail: 'bg-accent',
+        icon: Info,
+        iconClass: 'text-accent',
+      };
   }
 }
 
@@ -58,25 +73,34 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="fixed right-4 top-4 z-50 flex w-full max-w-sm flex-col gap-3 px-2 sm:px-0">
         {toasts.map(({ id, title, description, variant = 'default' }) => (
-          <div
-            key={id}
-            className={clsx('overflow-hidden rounded-3xl border px-4 py-3 shadow-lg', getVariantStyles(variant))}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="font-semibold">{title}</p>
-                {description ? <p className="mt-1 text-sm text-ink-muted">{description}</p> : null}
-              </div>
-              <button
-                type="button"
-                onClick={() => dismiss(id)}
-                className="rounded-full p-1 text-ink transition hover:bg-bg"
+          (() => {
+            const styles = getVariantStyles(variant);
+            const Icon = styles.icon;
+
+            return (
+              <div
+                key={id}
+                className={clsx('relative overflow-hidden rounded-3xl border px-4 py-3 pl-5 shadow-lg', styles.card)}
               >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Dismiss notification</span>
-              </button>
-            </div>
-          </div>
+                <span className={clsx('absolute inset-y-0 left-0 w-1', styles.rail)} aria-hidden="true" />
+                <div className="flex items-start gap-3">
+                  <Icon className={clsx('mt-0.5 h-5 w-5 shrink-0', styles.iconClass)} aria-hidden="true" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-ink">{title}</p>
+                    {description ? <p className="mt-1 text-sm leading-5 text-ink-muted">{description}</p> : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => dismiss(id)}
+                    className="shrink-0 rounded-xl p-1 text-ink-muted transition hover:bg-bg hover:text-ink"
+                  >
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Dismiss notification</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })()
         ))}
       </div>
     </ToastContext.Provider>

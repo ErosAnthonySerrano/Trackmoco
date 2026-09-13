@@ -108,7 +108,7 @@ export async function POST(req: Request) {
 
   const { data: installment, error: installmentError } = await serviceSupabase
     .from('installments')
-    .select('id, title')
+    .select('id, title, type')
     .eq('id', invitation.installment_id)
     .single();
 
@@ -119,6 +119,7 @@ export async function POST(req: Request) {
   const payload = {
     installment_id: invitation.installment_id,
     title: installment.title,
+    type: installment.type,
     role: invitation.role,
     invitee_name: userEmail,
   };

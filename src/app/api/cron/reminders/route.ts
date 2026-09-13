@@ -139,7 +139,13 @@ export async function POST(req: NextRequest) {
         const email = profile?.email;
 
         // insert notification row
-        const payload = { installment_id: item.installment_id, title, item_id: item.id, label: item.label };
+        const payload = {
+          installment_id: item.installment_id,
+          title,
+          item_id: item.id,
+          label: item.label,
+          due_date: item.due_date,
+        };
         const { error: notifErr } = await supabase.from('notifications').insert([{ user_id: userId, type: 'reminder', payload }]);
         if (notifErr) {
           // log and continue
@@ -148,9 +154,10 @@ export async function POST(req: NextRequest) {
 
         if (email) {
           const subject = `Upcoming payment due: ${title} — ${item.label}`;
+          const installmentUrl = `${process.env.NEXT_PUBLIC_APP_URL || ''}/${item.installment_id}`;
           const html = `<p>Hi ${profile?.display_name ?? ''},</p>
             <p>This is a reminder that <strong>${item.label}</strong> for <strong>${title}</strong> is due on <strong>${item.due_date}</strong>.<br/>Amount: ${item.amount}</p>
-            <p><a href="${process.env.NEXT_PUBLIC_APP_URL || '/'}">Open Trackmoco</a></p>`;
+            <p><a href="${installmentUrl}">Open installment</a></p>`;
           try {
             await sendEmail(email, subject, html);
           } catch (e) {

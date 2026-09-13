@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Ban, Trash2 } from 'lucide-react';
+import { Ban, Eye, EyeOff, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { Button, Modal, Skeleton, useToast } from '@/components/ui';
+import { BackButton, Button, Modal, Skeleton, useToast } from '@/components/ui';
 
 type BlockedEmail = {
   id: string;
@@ -20,6 +20,8 @@ export default function SettingsPage() {
   const router = useRouter();
   const toast = useToast();
   const [loading, setLoading] = useState(true);
+  const [accountName, setAccountName] = useState('Account');
+  const [accountEmail, setAccountEmail] = useState('');
   const [receiveInvitations, setReceiveInvitations] = useState(true);
   const [savingPreference, setSavingPreference] = useState(false);
   const [blockedEmails, setBlockedEmails] = useState<BlockedEmail[]>([]);
@@ -31,25 +33,38 @@ export default function SettingsPage() {
   const [deleteEmail, setDeleteEmail] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
       const supabase = createClient();
-      const sessionResult = await supabase.auth.getSession();
-      const userId = sessionResult.data.session?.user?.id;
+      const userResult = await supabase.auth.getUser();
+      const user = userResult.data.user;
+      const userId = user?.id;
 
       if (!userId) {
         router.replace('/login');
         return;
       }
 
+      setAccountEmail(user.email ?? '');
+      setAccountName(user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Account');
+
       const [{ data: profile }, { data: blocklist }] = await Promise.all([
-        supabase.from('profiles').select('receive_invitations, email').eq('id', userId).maybeSingle(),
+        supabase.from('profiles').select('receive_invitations, email, display_name').eq('id', userId).maybeSingle(),
         supabase.from('blocklist').select('id, blocked_email, created_at').order('created_at', { ascending: false }),
       ]);
 
       if (profile) {
         setReceiveInvitations(profile.receive_invitations !== false);
+        setAccountEmail(profile.email || user.email || '');
+        setAccountName(profile.display_name || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Account');
       }
 
       setBlockedEmails((blocklist ?? []) as BlockedEmail[]);
@@ -183,12 +198,56 @@ export default function SettingsPage() {
     router.replace('/login');
   };
 
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setSigningOut(false);
+      toast.toast({ title: 'Sign out failed', description: error.message, variant: 'danger' });
+      return;
+    }
+    router.replace('/login');
+  };
+
+  const handlePasswordUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPasswordError(null);
+
+    if (newPassword.length < 6) {
+      setPasswordError('Use at least 6 characters for your password.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match.');
+      return;
+    }
+
+    setSavingPassword(true);
+    const { error } = await createClient().auth.updateUser({ password: newPassword });
+    setSavingPassword(false);
+
+    if (error) {
+      setPasswordError(error.message);
+      return;
+    }
+
+    setNewPassword('');
+    setConfirmPassword('');
+    toast.toast({
+      title: 'Password saved',
+      description: 'You can now sign in with your email and password.',
+      variant: 'success',
+    });
+  };
+
   return (
-    <main className="min-h-screen bg-bg px-4 py-10 text-ink">
+    <main className="min-h-screen bg-bg px-4 py-6 text-ink sm:py-10">
       <div className="mx-auto max-w-3xl">
+        <BackButton href="/" label="Back to dashboard" />
         <div className="mb-8">
           <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-ink-muted">Account</p>
-          <h1 className="text-4xl font-semibold">Settings</h1>
+          <h1 className="text-3xl font-semibold sm:text-4xl">Settings</h1>
         </div>
 
         {loading ? (
@@ -204,6 +263,65 @@ export default function SettingsPage() {
           </div>
         ) : (
           <div className="space-y-8">
+            <section className="rounded-3xl border border-line bg-surface p-6 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-ink-muted">Account information</p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-line bg-bg px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">Name</p>
+                  <p className="mt-1 truncate font-semibold text-ink">{accountName}</p>
+                </div>
+                <div className="rounded-2xl border border-line bg-bg px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">Email</p>
+                  <p className="mt-1 truncate font-semibold text-ink">{accountEmail}</p>
+                </div>
+              </div>
+            </section>
+            <section className="rounded-3xl border border-line bg-surface p-6 shadow-sm">
+              <h2 className="text-lg font-semibold text-ink">Password sign-in</h2>
+              <p className="mt-1 text-sm text-ink-muted">
+                Set a password to sign in without waiting for an email code. You can update it here at any time.
+              </p>
+              <form onSubmit={handlePasswordUpdate} className="mt-5 grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm font-medium text-ink">
+                  New password
+                  <div className="relative mt-2">
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                      autoComplete="new-password"
+                      required
+                      className="w-full rounded-2xl border border-line bg-bg px-4 py-3 pr-12 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
+                    />
+                    <button type="button" onClick={() => setShowNewPassword((value) => !value)} aria-label={showNewPassword ? 'Hide password' : 'Show password'} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl p-2 text-ink-muted transition hover:bg-accent-soft hover:text-ink">
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </label>
+                <label className="block text-sm font-medium text-ink">
+                  Confirm password
+                  <div className="relative mt-2">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      autoComplete="new-password"
+                      required
+                      className="w-full rounded-2xl border border-line bg-bg px-4 py-3 pr-12 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
+                    />
+                    <button type="button" onClick={() => setShowConfirmPassword((value) => !value)} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl p-2 text-ink-muted transition hover:bg-accent-soft hover:text-ink">
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </label>
+                {passwordError ? <p className="text-sm text-danger sm:col-span-2">{passwordError}</p> : null}
+                <div className="sm:col-span-2">
+                  <Button type="submit" variant="secondary" isLoading={savingPassword}>
+                    Save password
+                  </Button>
+                </div>
+              </form>
+            </section>
             <section className="rounded-3xl border border-line bg-surface p-6 shadow-sm">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -280,6 +398,14 @@ export default function SettingsPage() {
                   </ul>
                 )}
               </div>
+            </section>
+
+            <section className="rounded-3xl border border-line bg-surface p-6 shadow-sm">
+              <h2 className="text-lg font-semibold text-ink">Session</h2>
+              <p className="mt-1 text-sm text-ink-muted">Sign out of Trackmoco on this device.</p>
+              <Button type="button" variant="secondary" className="mt-4" isLoading={signingOut} onClick={handleSignOut}>
+                Sign out
+              </Button>
             </section>
 
             <section className="rounded-3xl border border-danger/30 bg-danger-soft/40 p-6">

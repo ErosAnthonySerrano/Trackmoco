@@ -79,10 +79,11 @@ export function getFixedMonthlyDates(startMonth: string, count: number, anchorDa
 
 export function getFixedYearlyDates(startYear: number, count: number, month: number, day: number) {
   if (!startYear || count < 1 || month < 1 || month > 12 || day < 1) return [];
-  const base = new Date(startYear, month - 1, day);
+  const base = new Date(startYear, month - 1, 1);
 
   return Array.from({ length: count }, (_, index) => {
     const date = addIntervalClamped(base, 'year', index, day);
+    date.setMonth(month - 1);
     return toIsoDate(date);
   });
 }
