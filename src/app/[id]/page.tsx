@@ -4,12 +4,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { format, parseISO } from 'date-fns';
+import { Pencil } from 'lucide-react';
 import { BackButton, Button, Modal, Skeleton } from '@/components/ui';
 import { ItemEditModal, ProofFile, ProofViewerModal } from '@/components/installments/item-edit-modal';
+import { InstallmentEditModal } from '@/components/installments/installment-edit-modal';
 import { ShareModal } from '@/components/installments/share-modal';
 
 type InstallmentItem = {
   id: string;
+  sequence_index?: number;
   label: string;
   due_date: string;
   amount: string;
@@ -22,6 +25,8 @@ type Installment = {
   title: string;
   type: 'daily' | 'weekly' | 'monthly' | 'yearly';
   created_by: string;
+  default_amount: string | number | null;
+  start_date: string;
   installment_items: InstallmentItem[];
 };
 
@@ -39,6 +44,7 @@ export default function InstallmentDetailPage() {
   const [openItem, setOpenItem] = useState<InstallmentItem | null>(null);
   const [proofItem, setProofItem] = useState<InstallmentItem | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
@@ -66,7 +72,7 @@ export default function InstallmentDetailPage() {
           .single(),
         supabase
           .from('installments')
-          .select('id, title, type, created_by, installment_items(id, label, due_date, amount, status, proof_files(id, file_url, file_type, uploaded_at, uploaded_by, original_name, profiles(display_name, email)))')
+          .select('id, title, type, created_by, default_amount, start_date, installment_items(id, sequence_index, label, due_date, amount, status, proof_files(id, file_url, file_type, uploaded_at, uploaded_by, original_name, profiles(display_name, email)))')
           .eq('id', installmentId)
           .single(),
       ]);
@@ -99,6 +105,7 @@ export default function InstallmentDetailPage() {
     : Math.max(1, Math.ceil(paidItems.length / pageSize));
 
   const formatDate = (value: string) => format(parseISO(value), 'MMM d, yyyy');
+  const formatAmount = (value: string | number) => `PHP ${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const returnTo = searchParams.get('returnTo') || '/';
 
   const handleDeleteInstallment = async () => {
@@ -123,9 +130,15 @@ export default function InstallmentDetailPage() {
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-ink-muted">Installment details</p>
-            <h1 className="max-w-full break-words text-3xl font-semibold sm:text-4xl">{installment?.title ?? 'Loading...'}</h1>
+            <h1 className="max-w-full wrap-break-word text-3xl font-semibold sm:text-4xl">{installment?.title ?? 'Loading...'}</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            {userRole !== 'viewer' ? (
+              <Button type="button" variant="secondary" onClick={() => setEditOpen(true)}>
+                <Pencil className="h-4 w-4" />
+                Edit installment
+              </Button>
+            ) : null}
             {userRole !== 'viewer' ? (
               <Button type="button" variant="secondary" onClick={() => setShareOpen(true)}>
                 Share
@@ -144,6 +157,42 @@ export default function InstallmentDetailPage() {
           onClose={() => setShareOpen(false)}
           installmentId={installmentId}
           installmentTitle={installment?.title ?? ''}
+        />
+
+        <InstallmentEditModal
+          open={editOpen}
+          installmentId={installmentId}
+          title={installment?.title ?? ''}
+          type={installment?.type ?? 'monthly'}
+          startDate={installment?.start_date ?? ''}
+          unpaidItems={inProgress.map((item, index) => ({ id: item.id, sequenceIndex: item.sequence_index ?? index + 1, dueDate: item.due_date }))}
+          totalAmount={inProgress.reduce((total, item) => total + Number(item.amount || 0), 0).toFixed(2)}
+          unpaidCount={inProgress.length}
+          onClose={() => setEditOpen(false)}
+          onSaved={({ title, type, defaultAmount, items: updatedItems }) => {
+            setInstallment((current) => {
+              if (!current) return current;
+              const updates = new Map(updatedItems.map((item) => [item.id, item]));
+              const updatedIds = new Set(updatedItems.map((item) => item.id));
+              const reconciledItems = current.installment_items
+                .filter((item) => item.status === 'paid' || updatedIds.has(item.id))
+                .map((item) => {
+                  const update = updates.get(item.id);
+                  return update ? { ...item, sequence_index: update.sequence_index, label: update.label, due_date: update.due_date, amount: update.amount } : item;
+                });
+              const existingIds = new Set(current.installment_items.map((item) => item.id));
+              const newItems = updatedItems
+                .filter((item) => !existingIds.has(item.id))
+                .map((item) => ({ ...item, status: 'unpaid' as const }));
+              return {
+                ...current,
+                title,
+                type,
+                default_amount: defaultAmount,
+                installment_items: [...reconciledItems, ...newItems],
+              };
+            });
+          }}
         />
 
         {loading ? (
@@ -189,6 +238,7 @@ export default function InstallmentDetailPage() {
                       <tr>
                         <th className="px-6 py-4 font-medium">Item</th>
                         <th className="px-6 py-4 font-medium">Due date</th>
+                        <th className="px-6 py-4 font-medium">Amount</th>
                         <th className="px-6 py-4 font-medium">Status</th>
                         <th className="px-6 py-4 font-medium">Proof</th>
                       </tr>
@@ -206,6 +256,7 @@ export default function InstallmentDetailPage() {
                         >
                           <td className="px-6 py-4 text-ink font-medium">{item.label}</td>
                           <td className="px-6 py-4 text-ink-muted">{formatDate(item.due_date)}</td>
+                          <td className="px-6 py-4 font-semibold text-ink">{formatAmount(item.amount)}</td>
                                                     <td className="px-6 py-4">
                             <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${item.status === 'paid' ? 'bg-success/10 text-success' : 'bg-line text-ink-muted'}`}>
                               {item.status === 'paid' ? 'Paid' : 'Unpaid'}
@@ -249,6 +300,7 @@ export default function InstallmentDetailPage() {
                         <div>
                           <p className="font-semibold text-ink">{item.label}</p>
                           <p className="mt-1 text-sm text-ink-muted">Due {formatDate(item.due_date)}</p>
+                          <p className="mt-2 text-sm font-semibold text-ink">{formatAmount(item.amount)}</p>
                         </div>
                                                 <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${item.status === 'paid' ? 'bg-success/10 text-success' : 'bg-line text-ink-muted'}`}>
                           {item.status === 'paid' ? 'Paid' : 'Unpaid'}
