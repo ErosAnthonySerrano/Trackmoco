@@ -1,7 +1,7 @@
 "use client";
 
 import { addMonths, format, parseISO } from 'date-fns';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { allocateAmount, getScheduleDateError, getWeekDate, toIsoDate } from '@/components/installments/installment-utils';
@@ -12,7 +12,7 @@ const today = toIsoDate(new Date());
 export default function WeeklyInstallmentPage() {
   const router = useRouter();
   const [title, setTitle] = useState('');
-  const [weekCount, setWeekCount] = useState(4);
+  const [weekCount, setWeekCount] = useState('4');
   const [amount, setAmount] = useState('');
   const [paymentAmounts, setPaymentAmounts] = useState<number[]>([]);
   const [mode, setMode] = useState<'auto' | 'manual'>('auto');
@@ -20,19 +20,21 @@ export default function WeeklyInstallmentPage() {
   const [dates, setDates] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const weekCountValue = Number(weekCount);
 
   useEffect(() => {
     if (mode === 'auto') {
-      setDates(Array.from({ length: weekCount }, (_, index) => getWeekDate(baseDate, index)));
+      // Synchronize generated dates when the schedule inputs change.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDates(Array.from({ length: weekCountValue }, (_, index) => getWeekDate(baseDate, index)));
     } else {
+      // Preserve manual entries while resizing the editable date list.
       setDates((current) => {
-        const next = Array.from({ length: weekCount }, (_, index) => current[index] ?? '');
+        const next = Array.from({ length: weekCountValue }, (_, index) => current[index] ?? '');
         return next;
       });
     }
-  }, [mode, baseDate, weekCount]);
-
-  const isManualReady = useMemo(() => dates[0] !== '', [dates]);
+  }, [mode, baseDate, weekCountValue]);
 
   const canEditWeek = (index: number) => {
     if (mode === 'auto') return true;
@@ -62,11 +64,11 @@ export default function WeeklyInstallmentPage() {
     });
   };
 
-  const allDatesSet = dates.length === weekCount && dates.every(Boolean);
+  const allDatesSet = dates.length === weekCountValue && dates.every(Boolean);
   const dateError = allDatesSet ? getScheduleDateError(dates) : null;
   const amountValue = Number(amount);
-  const hasError = !title.trim() || amountValue <= 0 || !Number.isFinite(amountValue) || paymentAmounts.length !== weekCount || !allDatesSet || Boolean(dateError);
-  const handleCalculateAmount = () => setPaymentAmounts(allocateAmount(amountValue, weekCount));
+  const hasError = !title.trim() || amountValue <= 0 || !Number.isFinite(amountValue) || !Number.isInteger(weekCountValue) || weekCountValue < 1 || paymentAmounts.length !== weekCountValue || !allDatesSet || Boolean(dateError);
+  const handleCalculateAmount = () => setPaymentAmounts(allocateAmount(amountValue, weekCountValue));
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -164,7 +166,7 @@ export default function WeeklyInstallmentPage() {
                 className="min-w-0 flex-1 rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
                 placeholder="0.00"
               />
-              <Button type="button" variant="secondary" onClick={handleCalculateAmount} disabled={!amount || weekCount < 1} className="shrink-0 px-3 text-xs">Calculate</Button>
+              <Button type="button" variant="secondary" onClick={handleCalculateAmount} disabled={!amount || weekCountValue < 1} className="shrink-0 px-3 text-xs">Calculate</Button>
               </div>
               <span className="mt-2 block text-xs font-normal text-ink-muted">Divide the total across {weekCount} weekly payments.</span>
             </label>
@@ -181,7 +183,7 @@ export default function WeeklyInstallmentPage() {
                 min="1"
                 max="104"
                 value={weekCount}
-                onChange={(event) => { setWeekCount(Number(event.target.value)); setPaymentAmounts([]); }}
+                onChange={(event) => { setWeekCount(event.target.value); setPaymentAmounts([]); }}
                 className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
               />
             </label>
@@ -216,7 +218,7 @@ export default function WeeklyInstallmentPage() {
             </div>
 
             <div className="grid gap-4">
-              {Array.from({ length: weekCount }, (_, index) => {
+              {Array.from({ length: weekCountValue }, (_, index) => {
                 const disabled = mode === 'manual' && !canEditWeek(index);
                 const defaultValue = mode === 'auto' ? getWeekDate(baseDate, index) : dates[index] ?? '';
                 return (

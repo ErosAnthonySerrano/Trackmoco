@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { allocateAmount, getFixedYearlyDates, getScheduleDateError, getYearLabel, toIsoDate } from '@/components/installments/installment-utils';
+import { allocateAmount, getFixedYearlyDates, getScheduleDateError, getYearLabel } from '@/components/installments/installment-utils';
 import { BackButton, Button, Select } from '@/components/ui';
 
 const today = new Date();
@@ -12,7 +12,7 @@ const defaultStartYear = today.getFullYear();
 export default function YearlyInstallmentPage() {
   const router = useRouter();
   const [title, setTitle] = useState('');
-  const [yearCount, setYearCount] = useState(3);
+  const [yearCount, setYearCount] = useState('3');
   const [startYear, setStartYear] = useState(defaultStartYear);
   const [amount, setAmount] = useState('');
   const [paymentAmounts, setPaymentAmounts] = useState<number[]>([]);
@@ -22,19 +22,22 @@ export default function YearlyInstallmentPage() {
   const [manualDates, setManualDates] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const yearCountValue = Number(yearCount);
 
   const autoDates = useMemo(() => {
     if (!sameDate) return [];
-    return getFixedYearlyDates(startYear, yearCount, month, day);
-  }, [sameDate, startYear, yearCount, month, day]);
+    return getFixedYearlyDates(startYear, yearCountValue, month, day);
+  }, [sameDate, startYear, yearCountValue, month, day]);
 
   useEffect(() => {
     if (!sameDate) {
+      // Synchronize the editable date list with the selected year count.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setManualDates((current) =>
-        Array.from({ length: yearCount }, (_, index) => current[index] ?? autoDates[index] ?? '')
+        Array.from({ length: yearCountValue }, (_, index) => current[index] ?? autoDates[index] ?? '')
       );
     }
-  }, [sameDate, yearCount, autoDates]);
+  }, [sameDate, yearCountValue, autoDates]);
 
   const handleSameDateToggle = (checked: boolean) => {
     if (checked && !sameDate && manualDates.some(Boolean)) {
@@ -48,13 +51,13 @@ export default function YearlyInstallmentPage() {
     }
   };
 
-  const years = Array.from({ length: yearCount }, (_, index) => startYear + index);
+  const years = Array.from({ length: yearCountValue }, (_, index) => startYear + index);
   const dates = sameDate ? autoDates : manualDates;
-  const allSet = dates.length === yearCount && dates.every(Boolean);
+  const allSet = dates.length === yearCountValue && dates.every(Boolean);
   const dateError = allSet ? getScheduleDateError(dates) : null;
   const amountValue = Number(amount);
-  const hasError = !title.trim() || amountValue <= 0 || !Number.isFinite(amountValue) || paymentAmounts.length !== yearCount || !allSet || Boolean(dateError);
-  const handleCalculateAmount = () => setPaymentAmounts(allocateAmount(amountValue, yearCount));
+  const hasError = !title.trim() || amountValue <= 0 || !Number.isFinite(amountValue) || !Number.isInteger(yearCountValue) || yearCountValue < 1 || paymentAmounts.length !== yearCountValue || !allSet || Boolean(dateError);
+  const handleCalculateAmount = () => setPaymentAmounts(allocateAmount(amountValue, yearCountValue));
 
   const handleManualChange = (index: number, value: string) => {
     setManualDates((current) => {
@@ -160,7 +163,7 @@ export default function YearlyInstallmentPage() {
                 className="min-w-0 flex-1 rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
                 placeholder="0.00"
               />
-              <Button type="button" variant="secondary" onClick={handleCalculateAmount} disabled={!amount || yearCount < 1} className="shrink-0 px-3 text-xs">Calculate</Button>
+              <Button type="button" variant="secondary" onClick={handleCalculateAmount} disabled={!amount || yearCountValue < 1} className="shrink-0 px-3 text-xs">Calculate</Button>
               </div>
               <span className="mt-2 block text-xs font-normal text-ink-muted">Divide the total across {yearCount} yearly payments.</span>
             </label>
@@ -177,7 +180,7 @@ export default function YearlyInstallmentPage() {
                 min="1"
                 max="50"
                 value={yearCount}
-                onChange={(event) => { setYearCount(Number(event.target.value)); setPaymentAmounts([]); }}
+                onChange={(event) => { setYearCount(event.target.value); setPaymentAmounts([]); }}
                 className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
               />
             </label>

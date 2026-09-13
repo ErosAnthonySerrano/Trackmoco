@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { getFixedMonthlyDates, getMonthRows, getMonthLabel, getScheduleDateError, toIsoDate } from '@/components/installments/installment-utils';
+import { getFixedMonthlyDates, getMonthRows, getMonthLabel, getScheduleDateError } from '@/components/installments/installment-utils';
 import { BackButton, Button, Select } from '@/components/ui';
 
 const today = new Date();
@@ -12,7 +12,7 @@ const defaultStartMonth = `${today.getFullYear()}-${String(today.getMonth() + 1)
 export default function MonthlyInstallmentPage() {
   const router = useRouter();
   const [title, setTitle] = useState('');
-  const [monthCount, setMonthCount] = useState(6);
+  const [monthCount, setMonthCount] = useState('6');
   const [startMonth, setStartMonth] = useState(defaultStartMonth);
   const [amount, setAmount] = useState('');
   const [calculatedAmount, setCalculatedAmount] = useState('');
@@ -22,19 +22,22 @@ export default function MonthlyInstallmentPage() {
   const [manualDates, setManualDates] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const monthCountValue = Number(monthCount);
 
   const autoDates = useMemo(() => {
     if (!sameDay) return [];
-    return getFixedMonthlyDates(startMonth, monthCount, anchorDay);
-  }, [sameDay, startMonth, monthCount, anchorDay]);
+    return getFixedMonthlyDates(startMonth, monthCountValue, anchorDay);
+  }, [sameDay, startMonth, monthCountValue, anchorDay]);
 
   useEffect(() => {
     if (!sameDay) {
+      // Synchronize the editable date list with the selected month count.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setManualDates((current) =>
-        Array.from({ length: monthCount }, (_, index) => current[index] ?? autoDates[index] ?? '')
+        Array.from({ length: monthCountValue }, (_, index) => current[index] ?? autoDates[index] ?? '')
       );
     }
-  }, [sameDay, monthCount, autoDates]);
+  }, [sameDay, monthCountValue, autoDates]);
 
   const handleSameDayToggle = (checked: boolean) => {
     if (checked && !sameDay && manualDates.some(Boolean)) {
@@ -48,35 +51,35 @@ export default function MonthlyInstallmentPage() {
     }
   };
 
-  const monthRows = useMemo(() => getMonthRows(startMonth, monthCount), [startMonth, monthCount]);
+  const monthRows = useMemo(() => getMonthRows(startMonth, monthCountValue), [startMonth, monthCountValue]);
 
   const dates = sameDay ? autoDates : manualDates;
 
-  const allSet = dates.length === monthCount && dates.every(Boolean);
+  const allSet = dates.length === monthCountValue && dates.every(Boolean);
   const dateError = allSet ? getScheduleDateError(dates) : null;
   const amountValue = Number(calculatedAmount || amount);
-  const hasError = !title.trim() || amountValue <= 0 || !Number.isFinite(amountValue) || paymentAmounts.length !== monthCount || !allSet || Boolean(dateError);
+  const hasError = !title.trim() || amountValue <= 0 || !Number.isFinite(amountValue) || !Number.isInteger(monthCountValue) || monthCountValue < 1 || paymentAmounts.length !== monthCountValue || !allSet || Boolean(dateError);
 
   const handleCalculateAmount = () => {
     const totalAmount = Number(amount);
-    if (totalAmount <= 0 || !Number.isFinite(totalAmount) || monthCount <= 0) {
+    if (totalAmount <= 0 || !Number.isFinite(totalAmount) || monthCountValue <= 0) {
       setCalculatedAmount('');
       setPaymentAmounts([]);
       return;
     }
 
     const totalCents = Math.round(totalAmount * 100);
-    const baseCents = Math.floor(totalCents / monthCount);
-    const remainderCents = totalCents % monthCount;
-    const allocations = Array.from({ length: monthCount }, (_, index) => (
+    const baseCents = Math.floor(totalCents / monthCountValue);
+    const remainderCents = totalCents % monthCountValue;
+    const allocations = Array.from({ length: monthCountValue }, (_, index) => (
       (baseCents + (index < remainderCents ? 1 : 0)) / 100
     ));
 
     setPaymentAmounts(allocations);
-    setCalculatedAmount((totalCents / monthCount / 100).toFixed(2));
+    setCalculatedAmount((totalCents / monthCountValue / 100).toFixed(2));
   };
 
-  const handleMonthCountChange = (value: number) => {
+  const handleMonthCountChange = (value: string) => {
     setMonthCount(value);
     setCalculatedAmount('');
     setPaymentAmounts([]);
@@ -190,7 +193,7 @@ export default function MonthlyInstallmentPage() {
                   className="min-w-0 flex-1 rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
                   placeholder="0.00"
                 />
-                <Button type="button" variant="secondary" onClick={handleCalculateAmount} disabled={!amount || monthCount <= 0} className="shrink-0 px-3 text-xs sm:px-4">
+                <Button type="button" variant="secondary" onClick={handleCalculateAmount} disabled={!amount || monthCountValue <= 0} className="shrink-0 px-3 text-xs sm:px-4">
                   Calculate
                 </Button>
               </div>
@@ -214,7 +217,7 @@ export default function MonthlyInstallmentPage() {
                 min="1"
                 max="120"
                 value={monthCount}
-                onChange={(event) => handleMonthCountChange(Number(event.target.value))}
+                onChange={(event) => handleMonthCountChange(event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
               />
             </label>
@@ -235,7 +238,7 @@ export default function MonthlyInstallmentPage() {
                 <input
                   type="checkbox"
                   checked={sameDay}
-                  onChange={(event) => setSameDay(event.target.checked)}
+                  onChange={(event) => handleSameDayToggle(event.target.checked)}
                   className="h-5 w-5 rounded border border-line text-accent focus:ring-accent"
                 />
                 Set the same due day every month
@@ -283,7 +286,7 @@ export default function MonthlyInstallmentPage() {
 
             {dateError ? <p className="text-sm text-danger">{dateError}</p> : null}
               <p className="text-sm text-ink-muted">{allSet ? `${monthCount} months ready` : 'Complete all due dates to save.'}</p>
-              {paymentAmounts.length === monthCount ? (
+              {paymentAmounts.length === monthCountValue ? (
                 <p className="mt-1 text-xs text-ink-muted">
                   Preview total: ₱{paymentAmounts.reduce((total, value) => total + value, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
