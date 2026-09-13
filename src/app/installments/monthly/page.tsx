@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { getFixedMonthlyDates, getMonthRows, getMonthLabel, toIsoDate } from '@/components/installments/installment-utils';
+import { getFixedMonthlyDates, getMonthRows, getMonthLabel, getScheduleDateError, toIsoDate } from '@/components/installments/installment-utils';
 import { BackButton, Button, Select } from '@/components/ui';
 
 const today = new Date();
@@ -15,6 +15,8 @@ export default function MonthlyInstallmentPage() {
   const [monthCount, setMonthCount] = useState(6);
   const [startMonth, setStartMonth] = useState(defaultStartMonth);
   const [amount, setAmount] = useState('');
+  const [calculatedAmount, setCalculatedAmount] = useState('');
+  const [paymentAmounts, setPaymentAmounts] = useState<number[]>([]);
   const [sameDay, setSameDay] = useState(true);
   const [anchorDay, setAnchorDay] = useState(1);
   const [manualDates, setManualDates] = useState<string[]>([]);
@@ -51,7 +53,34 @@ export default function MonthlyInstallmentPage() {
   const dates = sameDay ? autoDates : manualDates;
 
   const allSet = dates.length === monthCount && dates.every(Boolean);
-  const hasError = !title.trim() || Number(amount) <= 0 || !Number.isFinite(Number(amount)) || !allSet;
+  const dateError = allSet ? getScheduleDateError(dates) : null;
+  const amountValue = Number(calculatedAmount || amount);
+  const hasError = !title.trim() || amountValue <= 0 || !Number.isFinite(amountValue) || paymentAmounts.length !== monthCount || !allSet || Boolean(dateError);
+
+  const handleCalculateAmount = () => {
+    const totalAmount = Number(amount);
+    if (totalAmount <= 0 || !Number.isFinite(totalAmount) || monthCount <= 0) {
+      setCalculatedAmount('');
+      setPaymentAmounts([]);
+      return;
+    }
+
+    const totalCents = Math.round(totalAmount * 100);
+    const baseCents = Math.floor(totalCents / monthCount);
+    const remainderCents = totalCents % monthCount;
+    const allocations = Array.from({ length: monthCount }, (_, index) => (
+      (baseCents + (index < remainderCents ? 1 : 0)) / 100
+    ));
+
+    setPaymentAmounts(allocations);
+    setCalculatedAmount((totalCents / monthCount / 100).toFixed(2));
+  };
+
+  const handleMonthCountChange = (value: number) => {
+    setMonthCount(value);
+    setCalculatedAmount('');
+    setPaymentAmounts([]);
+  };
 
   const handleManualChange = (index: number, value: string) => {
     setManualDates((current) => {
@@ -75,12 +104,11 @@ export default function MonthlyInstallmentPage() {
       return;
     }
 
-    const amountValue = Number(amount);
     const itemRows = dates.map((date, index) => ({
       sequence_index: index + 1,
       label: getMonthLabel(date),
       due_date: date,
-      amount: amountValue,
+      amount: paymentAmounts[index] ?? amountValue,
       status: 'unpaid',
     }));
 
@@ -147,21 +175,35 @@ export default function MonthlyInstallmentPage() {
               />
             </label>
             <label className="block text-sm font-medium text-ink-muted">
-              Amount
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-                required
-                className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
-                placeholder="0.00"
-              />
+              Total amount
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  pattern="[0-9]*([.][0-9]{1,2})?"
+                  value={amount}
+                  onChange={(event) => {
+                    setAmount(event.target.value);
+                    setCalculatedAmount('');
+                  }}
+                  required
+                  className="min-w-0 flex-1 rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
+                  placeholder="0.00"
+                />
+                <Button type="button" variant="secondary" onClick={handleCalculateAmount} disabled={!amount || monthCount <= 0} className="shrink-0 px-3 text-xs sm:px-4">
+                  Calculate
+                </Button>
+              </div>
+              <span className="mt-2 block text-xs font-normal text-ink-muted">Divide the total across {monthCount} monthly payments.</span>
             </label>
           </div>
           {amount && (Number(amount) <= 0 || !Number.isFinite(Number(amount))) ? (
             <p className="text-sm text-danger">Amount must be a positive number.</p>
+          ) : null}
+          {calculatedAmount ? (
+            <div className="rounded-2xl border border-accent bg-accent-soft px-4 py-3 text-sm text-ink">
+              <span className="font-semibold">Calculated monthly amount:</span> ₱{Number(calculatedAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
           ) : null}
 
           <div className="grid gap-6 sm:grid-cols-2">
@@ -172,7 +214,7 @@ export default function MonthlyInstallmentPage() {
                 min="1"
                 max="120"
                 value={monthCount}
-                onChange={(event) => setMonthCount(Number(event.target.value))}
+                onChange={(event) => handleMonthCountChange(Number(event.target.value))}
                 className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
               />
             </label>
@@ -216,22 +258,37 @@ export default function MonthlyInstallmentPage() {
 
             <div className="grid gap-4">
               {monthRows.map((row, index) => (
-                <label key={row.date} className="block text-sm font-medium text-ink-muted">
-                  {row.label}
-                  <input
-                    type="date"
-                    value={sameDay ? autoDates[index] ?? '' : manualDates[index] ?? ''}
-                    onChange={(event) => handleManualChange(index, event.target.value)}
-                    disabled={sameDay}
-                    className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </label>
+                <div key={row.date} className="rounded-2xl border border-line bg-surface p-4">
+                  <label className="block text-sm font-medium text-ink-muted">
+                    {row.label}
+                    <input
+                      type="date"
+                      value={sameDay ? autoDates[index] ?? '' : manualDates[index] ?? ''}
+                      onChange={(event) => handleManualChange(index, event.target.value)}
+                      disabled={sameDay}
+                      className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </label>
+                  <p className="mt-3 flex items-center justify-between text-sm">
+                    <span className="text-ink-muted">Payment amount</span>
+                    <span className="font-semibold text-ink">₱{(paymentAmounts[index] ?? amountValue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </p>
+                </div>
               ))}
             </div>
           </div>
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-ink-muted">{allSet ? `${monthCount} months ready` : 'Complete all due dates to save.'}</p>
+            <div>
+
+            {dateError ? <p className="text-sm text-danger">{dateError}</p> : null}
+              <p className="text-sm text-ink-muted">{allSet ? `${monthCount} months ready` : 'Complete all due dates to save.'}</p>
+              {paymentAmounts.length === monthCount ? (
+                <p className="mt-1 text-xs text-ink-muted">
+                  Preview total: ₱{paymentAmounts.reduce((total, value) => total + value, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              ) : null}
+            </div>
             <Button type="submit" disabled={hasError || isSaving} className="w-full sm:w-auto">
               {isSaving ? 'Saving…' : 'Save monthly installment'}
             </Button>

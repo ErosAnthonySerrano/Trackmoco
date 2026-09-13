@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { getFixedYearlyDates, getYearLabel, toIsoDate } from '@/components/installments/installment-utils';
+import { allocateAmount, getFixedYearlyDates, getScheduleDateError, getYearLabel, toIsoDate } from '@/components/installments/installment-utils';
 import { BackButton, Button, Select } from '@/components/ui';
 
 const today = new Date();
@@ -15,6 +15,7 @@ export default function YearlyInstallmentPage() {
   const [yearCount, setYearCount] = useState(3);
   const [startYear, setStartYear] = useState(defaultStartYear);
   const [amount, setAmount] = useState('');
+  const [paymentAmounts, setPaymentAmounts] = useState<number[]>([]);
   const [sameDate, setSameDate] = useState(true);
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [day, setDay] = useState(today.getDate());
@@ -50,7 +51,10 @@ export default function YearlyInstallmentPage() {
   const years = Array.from({ length: yearCount }, (_, index) => startYear + index);
   const dates = sameDate ? autoDates : manualDates;
   const allSet = dates.length === yearCount && dates.every(Boolean);
-  const hasError = !title.trim() || Number(amount) <= 0 || !Number.isFinite(Number(amount)) || !allSet;
+  const dateError = allSet ? getScheduleDateError(dates) : null;
+  const amountValue = Number(amount);
+  const hasError = !title.trim() || amountValue <= 0 || !Number.isFinite(amountValue) || paymentAmounts.length !== yearCount || !allSet || Boolean(dateError);
+  const handleCalculateAmount = () => setPaymentAmounts(allocateAmount(amountValue, yearCount));
 
   const handleManualChange = (index: number, value: string) => {
     setManualDates((current) => {
@@ -74,12 +78,11 @@ export default function YearlyInstallmentPage() {
       return;
     }
 
-    const amountValue = Number(amount);
     const itemRows = dates.map((date, index) => ({
       sequence_index: index + 1,
       label: getYearLabel(date),
       due_date: date,
-      amount: amountValue,
+      amount: paymentAmounts[index] ?? amountValue,
       status: 'unpaid',
     }));
 
@@ -91,7 +94,7 @@ export default function YearlyInstallmentPage() {
           type: 'yearly',
           start_date: `${startYear}-01-01`,
           total_count: itemRows.length,
-          default_amount: amountValue,
+          default_amount: paymentAmounts[0] ?? amountValue,
           currency: 'PHP',
           created_by: userId,
         },
@@ -146,17 +149,20 @@ export default function YearlyInstallmentPage() {
               />
             </label>
             <label className="block text-sm font-medium text-ink-muted">
-              Amount
+              Total amount
+              <div className="mt-2 flex gap-2">
               <input
-                type="number"
-                min="0"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={amount}
-                onChange={(event) => setAmount(event.target.value)}
+                onChange={(event) => { setAmount(event.target.value); setPaymentAmounts([]); }}
                 required
-                className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
+                className="min-w-0 flex-1 rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
                 placeholder="0.00"
               />
+              <Button type="button" variant="secondary" onClick={handleCalculateAmount} disabled={!amount || yearCount < 1} className="shrink-0 px-3 text-xs">Calculate</Button>
+              </div>
+              <span className="mt-2 block text-xs font-normal text-ink-muted">Divide the total across {yearCount} yearly payments.</span>
             </label>
           </div>
           {amount && (Number(amount) <= 0 || !Number.isFinite(Number(amount))) ? (
@@ -171,7 +177,7 @@ export default function YearlyInstallmentPage() {
                 min="1"
                 max="50"
                 value={yearCount}
-                onChange={(event) => setYearCount(Number(event.target.value))}
+                onChange={(event) => { setYearCount(Number(event.target.value)); setPaymentAmounts([]); }}
                 className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
               />
             </label>
@@ -187,6 +193,8 @@ export default function YearlyInstallmentPage() {
               />
             </label>
           </div>
+
+          {dateError ? <p className="text-sm text-danger">{dateError}</p> : null}
 
           <div className="rounded-3xl border border-line bg-bg p-6">
             <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -227,8 +235,9 @@ export default function YearlyInstallmentPage() {
 
             <div className="grid gap-4">
               {years.map((year, index) => (
-                <label key={year} className="block text-sm font-medium text-ink-muted">
-                  {year}
+                <div key={year} className="rounded-2xl border border-line bg-surface p-4">
+                  <label className="block text-sm font-medium text-ink-muted">
+                    {year}
                   <input
                     type="date"
                     value={sameDate ? autoDates[index] ?? '' : manualDates[index] ?? ''}
@@ -236,7 +245,9 @@ export default function YearlyInstallmentPage() {
                     disabled={sameDate}
                     className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
                   />
-                </label>
+                  </label>
+                  <p className="mt-2 text-right text-sm font-semibold text-ink">₱{(paymentAmounts[index] ?? amountValue).toFixed(2)}</p>
+                </div>
               ))}
             </div>
           </div>

@@ -87,3 +87,22 @@ export function getFixedYearlyDates(startYear: number, count: number, month: num
     return toIsoDate(date);
   });
 }
+
+export function allocateAmount(totalAmount: number, itemCount: number) {
+  if (!Number.isFinite(totalAmount) || totalAmount <= 0 || itemCount < 1) return [];
+  const totalCents = Math.round(totalAmount * 100);
+  const baseCents = Math.floor(totalCents / itemCount);
+  const remainderCents = totalCents % itemCount;
+  return Array.from({ length: itemCount }, (_, index) => (
+    (baseCents + (index < remainderCents ? 1 : 0)) / 100
+  ));
+}
+
+export function getScheduleDateError(dates: string[]) {
+  if (dates.some((date) => !isValidDateString(date))) return 'Set every payment date before saving.';
+  if (new Set(dates).size !== dates.length) return 'Payment dates must be unique.';
+  for (let index = 1; index < dates.length; index += 1) {
+    if (dates[index] <= dates[index - 1]) return 'Payment dates must be in chronological order.';
+  }
+  return null;
+}

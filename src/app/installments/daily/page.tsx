@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { getDailyRange, toIsoDate } from '@/components/installments/installment-utils';
+import { allocateAmount, getDailyRange, toIsoDate } from '@/components/installments/installment-utils';
 import { BackButton, Button } from '@/components/ui';
 
 const today = toIsoDate(new Date());
@@ -15,6 +15,7 @@ export default function DailyInstallmentPage() {
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const [amount, setAmount] = useState('');
+  const [paymentAmounts, setPaymentAmounts] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -43,10 +44,12 @@ export default function DailyInstallmentPage() {
   const selectedCount = days.filter((day) => checkedDays.has(day)).length;
   const itemCount = selectedCount;
   const allSelected = days.length > 0 && selectedCount === days.length;
-  const hasError = !title.trim() || Number(amount) <= 0 || !Number.isFinite(Number(amount)) || selectedCount === 0 || invalidRange;
+  const amountValue = Number(amount);
+  const hasError = !title.trim() || amountValue <= 0 || !Number.isFinite(amountValue) || selectedCount === 0 || paymentAmounts.length !== selectedCount || invalidRange;
   const rangeError = invalidRange ? 'End date must be later than start date.' : null;
 
   const toggleDay = (day: string) => {
+    setPaymentAmounts([]);
     setCheckedDays((current) => {
       const next = new Set(current);
       if (next.has(day)) {
@@ -57,6 +60,8 @@ export default function DailyInstallmentPage() {
       return next;
     });
   };
+
+  const handleCalculateAmount = () => setPaymentAmounts(allocateAmount(amountValue, selectedCount));
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -72,13 +77,12 @@ export default function DailyInstallmentPage() {
       return;
     }
 
-    const amountValue = Number(amount);
     const selectedDays = days.filter((day) => checkedDays.has(day));
     const itemRows = selectedDays.map((day, index) => ({
       sequence_index: index + 1,
       label: `Day ${index + 1}`,
       due_date: day,
-      amount: amountValue,
+      amount: paymentAmounts[index] ?? amountValue,
       status: 'unpaid',
     }));
 
@@ -91,7 +95,7 @@ export default function DailyInstallmentPage() {
           start_date: startDate,
           end_date: endDate,
           total_count: itemRows.length,
-          default_amount: amountValue,
+          default_amount: paymentAmounts[0] ?? amountValue,
           currency: 'PHP',
           created_by: userId,
         },
@@ -146,17 +150,20 @@ export default function DailyInstallmentPage() {
               />
             </label>
             <label className="block text-sm font-medium text-ink-muted">
-              Amount
+              Total amount
+              <div className="mt-2 flex gap-2">
               <input
-                type="number"
-                min="0"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={amount}
-                onChange={(event) => setAmount(event.target.value)}
+                onChange={(event) => { setAmount(event.target.value); setPaymentAmounts([]); }}
                 required
-                className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
+                className="min-w-0 flex-1 rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
                 placeholder="0.00"
               />
+              <Button type="button" variant="secondary" onClick={handleCalculateAmount} disabled={!amount || selectedCount === 0} className="shrink-0 px-3 text-xs">Calculate</Button>
+              </div>
+              <span className="mt-2 block text-xs font-normal text-ink-muted">Divide the total across the selected days.</span>
             </label>
           </div>
           {amount && (Number(amount) <= 0 || !Number.isFinite(Number(amount))) ? (
@@ -192,7 +199,10 @@ export default function DailyInstallmentPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setCheckedDays(new Set(allSelected ? [] : days))}
+                onClick={() => {
+                  setPaymentAmounts([]);
+                  setCheckedDays(new Set(allSelected ? [] : days));
+                }}
                 className="rounded-2xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-ink transition hover:bg-accent-soft"
               >
                 {allSelected ? 'Clear all' : 'Select all'}
@@ -215,6 +225,7 @@ export default function DailyInstallmentPage() {
                             className="flex cursor-pointer items-center justify-between rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink transition hover:bg-accent-soft"
                           >
                             <span>{checkedDays.has(day) ? `Day ${selectedIndex} — ${day}` : day}</span>
+                            {checkedDays.has(day) && paymentAmounts[selectedIndex - 1] !== undefined ? <span className="font-semibold">₱{paymentAmounts[selectedIndex - 1].toFixed(2)}</span> : null}
                             <input
                               type="checkbox"
                               checked={checkedDays.has(day)}

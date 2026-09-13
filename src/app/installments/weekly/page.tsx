@@ -4,7 +4,7 @@ import { addMonths, format, parseISO } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { getWeekDate, toIsoDate } from '@/components/installments/installment-utils';
+import { allocateAmount, getScheduleDateError, getWeekDate, toIsoDate } from '@/components/installments/installment-utils';
 import { BackButton, Button } from '@/components/ui';
 
 const today = toIsoDate(new Date());
@@ -14,6 +14,7 @@ export default function WeeklyInstallmentPage() {
   const [title, setTitle] = useState('');
   const [weekCount, setWeekCount] = useState(4);
   const [amount, setAmount] = useState('');
+  const [paymentAmounts, setPaymentAmounts] = useState<number[]>([]);
   const [mode, setMode] = useState<'auto' | 'manual'>('auto');
   const [baseDate, setBaseDate] = useState(today);
   const [dates, setDates] = useState<string[]>([]);
@@ -62,7 +63,10 @@ export default function WeeklyInstallmentPage() {
   };
 
   const allDatesSet = dates.length === weekCount && dates.every(Boolean);
-  const hasError = !title.trim() || Number(amount) <= 0 || !Number.isFinite(Number(amount)) || !allDatesSet;
+  const dateError = allDatesSet ? getScheduleDateError(dates) : null;
+  const amountValue = Number(amount);
+  const hasError = !title.trim() || amountValue <= 0 || !Number.isFinite(amountValue) || paymentAmounts.length !== weekCount || !allDatesSet || Boolean(dateError);
+  const handleCalculateAmount = () => setPaymentAmounts(allocateAmount(amountValue, weekCount));
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -78,12 +82,11 @@ export default function WeeklyInstallmentPage() {
       return;
     }
 
-    const amountValue = Number(amount);
     const itemRows = dates.map((date, index) => ({
       sequence_index: index + 1,
       label: `Week ${index + 1}`,
       due_date: date,
-      amount: amountValue,
+      amount: paymentAmounts[index] ?? amountValue,
       status: 'unpaid',
     }));
 
@@ -95,7 +98,7 @@ export default function WeeklyInstallmentPage() {
           type: 'weekly',
           start_date: baseDate,
           total_count: itemRows.length,
-          default_amount: amountValue,
+          default_amount: paymentAmounts[0] ?? amountValue,
           currency: 'PHP',
           created_by: userId,
         },
@@ -150,17 +153,20 @@ export default function WeeklyInstallmentPage() {
               />
             </label>
             <label className="block text-sm font-medium text-ink-muted">
-              Amount
+              Total amount
+              <div className="mt-2 flex gap-2">
               <input
-                type="number"
-                min="0"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={amount}
-                onChange={(event) => setAmount(event.target.value)}
+                onChange={(event) => { setAmount(event.target.value); setPaymentAmounts([]); }}
                 required
-                className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
+                className="min-w-0 flex-1 rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
                 placeholder="0.00"
               />
+              <Button type="button" variant="secondary" onClick={handleCalculateAmount} disabled={!amount || weekCount < 1} className="shrink-0 px-3 text-xs">Calculate</Button>
+              </div>
+              <span className="mt-2 block text-xs font-normal text-ink-muted">Divide the total across {weekCount} weekly payments.</span>
             </label>
           </div>
           {amount && (Number(amount) <= 0 || !Number.isFinite(Number(amount))) ? (
@@ -175,7 +181,7 @@ export default function WeeklyInstallmentPage() {
                 min="1"
                 max="104"
                 value={weekCount}
-                onChange={(event) => setWeekCount(Number(event.target.value))}
+                onChange={(event) => { setWeekCount(Number(event.target.value)); setPaymentAmounts([]); }}
                 className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
               />
             </label>
@@ -223,6 +229,7 @@ export default function WeeklyInstallmentPage() {
                       disabled={disabled}
                       className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
                     />
+                    <p className="mt-2 text-right text-sm font-semibold text-ink">₱{(paymentAmounts[index] ?? amountValue).toFixed(2)}</p>
                     {mode === 'manual' && index > 0 && dates[index - 1] && !dates[index] ? (
                       <p className="mt-2 text-xs text-ink-muted">Suggested month: {suggestedMonth(index)}</p>
                     ) : null}
@@ -231,6 +238,8 @@ export default function WeeklyInstallmentPage() {
               })}
             </div>
           </div>
+
+          {dateError ? <p className="text-sm text-danger">{dateError}</p> : null}
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-ink-muted">{allDatesSet ? `Weeks ready: ${weekCount}` : 'Complete all due dates to save.'}</p>
