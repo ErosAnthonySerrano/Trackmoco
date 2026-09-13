@@ -20,6 +20,11 @@ export const metadata: Metadata = {
   description: "Installment payment tracking for shared due dates and reminders.",
   manifest: "/manifest.json",
   themeColor: "#1C1B1F",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Trackmoco",
+  },
 };
 
 export default function RootLayout({
