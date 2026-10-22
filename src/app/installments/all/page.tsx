@@ -5,14 +5,17 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BackButton, Select, Skeleton } from '@/components/ui';
 import { createClient } from '@/lib/supabase/client';
+import { getInstallmentDetailsUrl } from '@/lib/utils/installment-url';
+import { InstallmentCardPaymentTotals } from '@/components/installments/installment-card-payment-totals';
 
 type Status = 'paid' | 'unpaid';
 type InstallmentType = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
-type InstallmentItem = { id: string; status: Status; due_date: string };
+type InstallmentItem = { id: string; status: Status; due_date: string; amount: string | number };
 type Member = { user_id: string; role: 'owner' | 'editor' | 'viewer' };
 type Installment = {
   id: string;
+  short_id: string;
   title: string;
   type: InstallmentType;
   created_by: string;
@@ -56,21 +59,13 @@ function AllInstallmentsContent() {
       setUserId(currentUserId);
       const { data, error } = await supabase
         .from('installments')
-        .select('id, title, type, created_by, installment_items(id, status, due_date), installment_members(user_id, role)')
+        .select('id, short_id, title, type, created_by, installment_items(id, status, due_date, amount), installment_members(user_id, role)')
         .order('title', { ascending: true });
       if (!error) setInstallments((data ?? []) as Installment[]);
       setLoading(false);
     };
     load();
   }, [router]);
-
-  useEffect(() => {
-    const focusId = searchParams.get('focus');
-    if (!focusId || loading) return;
-    window.requestAnimationFrame(() => {
-      document.getElementById(`all-installment-${focusId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
-  }, [loading, searchParams]);
 
   const visibleInstallments = useMemo(() => installments.filter((installment) => {
     const completed = installment.installment_items.length > 0 && installment.installment_items.every((item) => item.status === 'paid');
@@ -91,7 +86,7 @@ function AllInstallmentsContent() {
   return (
     <main className="min-h-screen bg-bg px-4 py-6 text-ink sm:py-10">
       <div className="mx-auto max-w-6xl">
-        <BackButton href={searchParams.get('from') === 'dashboard' ? '/?focus=' : '/'} label={searchParams.get('from') === 'dashboard' ? 'Back to dashboard' : 'Back'} />
+        <BackButton href="/" label={searchParams.get('from') === 'dashboard' ? 'Back to dashboard' : 'Back'} />
         <div className="mb-8">
           <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-ink-muted">Installment groups</p>
           <h1 className="text-3xl font-semibold sm:text-4xl">All installments</h1>
@@ -118,19 +113,40 @@ function AllInstallmentsContent() {
 
         {loading ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
-            {[1, 2, 3, 4, 5, 6].map((item) => <Skeleton key={item} className="h-32 w-full rounded-3xl sm:h-36" />)}
+            {[1, 2, 3, 4, 5, 6].map((item) => (
+              <div key={item} className="card p-4 sm:p-5">
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="mt-2 h-4 w-28" />
+                <div className="mt-5 flex gap-2">
+                  <Skeleton className="h-7 w-20 rounded-full" />
+                  <Skeleton className="h-7 w-24 rounded-full" />
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-3">
+                  <div>
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="mt-2 h-4 w-24" />
+                  </div>
+                  <div>
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="mt-2 h-4 w-24" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : visibleInstallments.length === 0 ? (
           <div className="card p-8 text-center text-sm text-ink-muted sm:p-10">No installment groups in this view.</div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
             {visibleInstallments.map((installment) => {
-              const unpaid = installment.installment_items.filter((item) => item.status === 'unpaid').length;
+              const paidItems = installment.installment_items.filter((item) => item.status === 'paid');
+              const unpaidItems = installment.installment_items.filter((item) => item.status === 'unpaid');
+              const paidAmount = paidItems.reduce((total, item) => total + Number(item.amount), 0);
+              const remainingAmount = unpaidItems.reduce((total, item) => total + Number(item.amount), 0);
               return (
                 <Link
                   key={installment.id}
-                  id={`all-installment-${installment.id}`}
-                  href={`/${installment.id}?returnTo=${encodeURIComponent(`/installments/all?tab=${tab}&focus=${installment.id}`)}`}
+                  href={getInstallmentDetailsUrl(installment.short_id)}
                   className="card block border-l-4 border-l-accent p-4 transition active:scale-[0.99] hover:border-accent hover:shadow-md sm:border-l sm:border-l-line sm:p-5"
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -141,9 +157,13 @@ function AllInstallmentsContent() {
                     {isShared(installment) ? <span className="shrink-0 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent">Shared</span> : null}
                   </div>
                   <div className="mt-5 flex items-center gap-2 text-xs font-semibold text-ink-muted sm:mt-6 sm:text-sm">
-                    <span className="rounded-full bg-line px-3 py-1.5">{installment.installment_items.length} items</span>
-                    <span className="rounded-full bg-accent-soft px-3 py-1.5 text-accent">{unpaid} unpaid</span>
+                    <span className="rounded-full bg-success-soft px-3 py-1.5 text-success">{paidItems.length} paid</span>
+                    <span className="rounded-full bg-accent-soft px-3 py-1.5 text-accent">{unpaidItems.length} unpaid</span>
                   </div>
+                  <InstallmentCardPaymentTotals
+                    paidAmount={paidAmount}
+                    remainingAmount={remainingAmount}
+                  />
                 </Link>
               );
             })}
@@ -164,7 +184,26 @@ function AllInstallmentsFallback() {
           <Skeleton className="h-5 w-80 max-w-full" />
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
-          {[1, 2, 3, 4, 5, 6].map((item) => <Skeleton key={item} className="h-32 w-full rounded-3xl sm:h-36" />)}
+          {[1, 2, 3, 4, 5, 6].map((item) => (
+            <div key={item} className="card p-4 sm:p-5">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="mt-2 h-4 w-28" />
+              <div className="mt-5 flex gap-2">
+                <Skeleton className="h-7 w-20 rounded-full" />
+                <Skeleton className="h-7 w-24 rounded-full" />
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-3">
+                <div>
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="mt-2 h-4 w-24" />
+                </div>
+                <div>
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="mt-2 h-4 w-24" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </main>

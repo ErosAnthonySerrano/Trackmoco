@@ -25,8 +25,11 @@ Decisions locked in before these specs were written:
 | SPEC-15 | Item Edit & Status Modal | SPEC-01, 07, 08 |
 | SPEC-16 | Notification Bell (UI Component) | SPEC-09, 13 |
 | SPEC-17 | Global UI Patterns | — (referenced by nearly everything) |
+| SPEC-18 | Installment Detail Summary & URL | SPEC-01, 07, 09, 13–17 |
+| SPEC-19 | Installment Card Payment Totals | SPEC-01, 07, 14, 17 |
+| SPEC-20 | Dashboard Personal Greeting | SPEC-01, 02, 17 |
 
-Suggested build order: 01 → 02 → 11 (tokens only, fast) → 17 (patterns, informs everything after) → 03 → 04 → 05 → 06 → 07 → 15 → 08 → 09 → 16 → 10 → 13 → 14 → 12 (PWA polish last).
+Suggested build order: 01 → 02 → 11 (tokens only, fast) → 17 (patterns, informs everything after) → 03 → 04 → 05 → 06 → 07 → 15 → 08 → 09 → 16 → 10 → 13 → 14 → 19 → 20 → 12 (PWA polish last).
 
 ## Coverage check against the original requirements doc
 Every numbered item from the original Trackmoco requirements PDF maps to a spec above:
@@ -45,3 +48,6 @@ Every numbered item from the original Trackmoco requirements PDF maps to a spec 
 - Item-level edit/status actions (was one line in the original "Action" column) → SPEC-15
 - Notification bell (was mentioned inline under Sharing) → SPEC-16
 - Reminders and Dashboard summary — not in the original doc, added during planning discussion → SPEC-13, SPEC-14
+- Installment detail totals and shorter/descriptive detail URLs → SPEC-18
+- Per-installment paid and remaining totals on dashboard and All Installments cards → SPEC-19
+- Time-of-day dashboard greeting using the signed-in profile name → SPEC-20

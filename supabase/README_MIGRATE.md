@@ -36,6 +36,10 @@ supabase migration new create_schema
 supabase migration apply
 ```
 
+The short installment detail URLs require the migration
+`supabase/migrations/20261022000000_installment_short_ids.sql`. Use
+`npm run db:migrate` to apply all pending migrations, including this one.
+
 Alternative: use psql directly with your database connection string (one-off):
 
 ```bash

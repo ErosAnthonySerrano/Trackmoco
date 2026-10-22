@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getInstallmentDetailsUrl } from '@/lib/utils/installment-url';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
@@ -99,11 +100,12 @@ export async function POST(req: NextRequest) {
       // fetch installment title
       const { data: insts, error: instErr } = await supabase
         .from('installments')
-        .select('id, title')
+        .select('id, short_id, title')
         .eq('id', item.installment_id)
         .single();
       if (instErr) throw instErr;
-      const title = insts?.title ?? 'Installment';
+      if (!insts?.short_id) throw new Error(`Installment ${item.installment_id} has no short ID.`);
+      const title = insts.title ?? 'Installment';
 
       // fetch members for this installment
       const { data: memberRows, error: memberErr } = await supabase
@@ -154,7 +156,7 @@ export async function POST(req: NextRequest) {
 
         if (email) {
           const subject = `Upcoming payment due: ${title} — ${item.label}`;
-          const installmentUrl = `${process.env.NEXT_PUBLIC_APP_URL || ''}/${item.installment_id}`;
+          const installmentUrl = `${process.env.NEXT_PUBLIC_APP_URL || ''}${getInstallmentDetailsUrl(insts.short_id)}`;
           const html = `<p>Hi ${profile?.display_name ?? ''},</p>
             <p>This is a reminder that <strong>${item.label}</strong> for <strong>${title}</strong> is due on <strong>${item.due_date}</strong>.<br/>Amount: ${item.amount}</p>
             <p><a href="${installmentUrl}">Open installment</a></p>`;

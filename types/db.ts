@@ -18,6 +18,7 @@ export interface Profile {
 
 export interface Installment {
   id: string;
+  short_id: string;
   title: string;
   type: InstallmentType;
   start_date: string; // ISO date

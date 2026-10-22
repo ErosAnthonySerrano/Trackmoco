@@ -8,9 +8,11 @@ import { ArrowRight, CalendarClock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { BackButton, Skeleton } from '@/components/ui';
 import { ItemQuickEdit } from '@/components/installments/item-quick-edit';
+import { getInstallmentDetailsUrl } from '@/lib/utils/installment-url';
 
 type InstallmentSummary = {
   id: string;
+  short_id: string | null;
   title: string;
   type: 'daily' | 'weekly' | 'monthly' | 'yearly';
 };
@@ -31,7 +33,7 @@ type UpcomingGroup = {
 
 function getInstallment(value: UpcomingRow['installments'], installmentId: string): InstallmentSummary {
   const installment = Array.isArray(value) ? value[0] : value;
-  return installment ?? { id: installmentId, title: 'Installment', type: 'monthly' };
+  return installment ?? { id: installmentId, short_id: null, title: 'Installment', type: 'monthly' };
 }
 
 function formatAmount(value: string | number) {
@@ -63,7 +65,7 @@ export default function UpcomingPage() {
 
       const { data, error } = await supabase
         .from('installment_items')
-        .select('id, label, due_date, amount, installment_id, installments(id, title, type)')
+        .select('id, label, due_date, amount, installment_id, installments(id, short_id, title, type)')
         .eq('status', 'unpaid')
         .order('due_date', { ascending: true });
 
@@ -130,10 +132,12 @@ export default function UpcomingPage() {
                     <h2 className="text-lg font-semibold">{group.installment.title}</h2>
                     <p className="text-sm capitalize text-ink-muted">{group.installment.type} schedule · {group.items.length} unpaid item{group.items.length === 1 ? '' : 's'}</p>
                   </div>
-                  <Link href={`/${group.installment.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-accent hover:underline">
-                    Open installment
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
+                  {group.installment.short_id ? (
+                    <Link href={getInstallmentDetailsUrl(group.installment.short_id)} className="inline-flex items-center gap-1 text-sm font-semibold text-accent hover:underline">
+                      Open installment
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  ) : null}
                 </div>
                 <div className="divide-y divide-line">
                   {group.items.map((item) => {

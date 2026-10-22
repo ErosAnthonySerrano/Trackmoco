@@ -93,6 +93,7 @@ export function AppHeader() {
 
   const isActive = (route: string) => {
     if (route === '/') return pathname === '/';
+    if (route === '/installments') return pathname === route;
     if (route === '/installments/all') {
       return pathname === route || pathname.startsWith(`${route}/`) || /^\/[0-9a-f-]{36}$/.test(pathname);
     }

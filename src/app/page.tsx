@@ -2,46 +2,87 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
+import { Moon, Sunrise, Sun, type LucideIcon } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button, Skeleton } from '@/components/ui';
 import { DashboardSummary } from '@/components/dashboard/dashboard-summary';
+import { getInstallmentDetailsUrl } from '@/lib/utils/installment-url';
+import { InstallmentCardPaymentTotals } from '@/components/installments/installment-card-payment-totals';
 
 type InstallmentItem = {
   id: string;
   status: 'paid' | 'unpaid';
   due_date: string;
+  amount: string | number;
 };
 
 type InstallmentRow = {
   id: string;
+  short_id: string;
   title: string;
   type: 'daily' | 'weekly' | 'monthly' | 'yearly';
   installment_items: InstallmentItem[];
 };
 
+type Greeting = {
+  label: string;
+  Icon: LucideIcon;
+};
+
+function getTimeGreeting(date: Date): Greeting {
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 12) return { label: 'Good morning', Icon: Sunrise };
+  if (hour >= 12 && hour < 17) return { label: 'Good afternoon', Icon: Sun };
+  return { label: 'Good evening', Icon: Moon };
+}
+
+function getGreetingName(value: string | null | undefined): string | null {
+  const name = value?.trim();
+  if (!name) return null;
+  return name.split(/\s+/).slice(0, 2).join(' ') || null;
+}
+
 function HomePageContent() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [installments, setInstallments] = useState<InstallmentRow[]>([]);
-  const searchParams = useSearchParams();
+  const [greeting, setGreeting] = useState<Greeting>({ label: 'Welcome', Icon: Sun });
+  const [profileName, setProfileName] = useState<string | null>(null);
 
   useEffect(() => {
+    const updateGreeting = () => setGreeting(getTimeGreeting(new Date()));
+    updateGreeting();
+    const greetingInterval = window.setInterval(updateGreeting, 60_000);
+
     const fetchData = async () => {
       const supabase = createClient();
       const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
+      const user = sessionData?.session?.user;
 
-      if (!userId) {
+      if (!user?.id) {
         router.replace('/login');
         return;
       }
 
-      const { data, error } = await supabase
-        .from('installments')
-        .select('id, title, type, installment_items(id, status, due_date)')
-        .order('title', { ascending: true });
+      const [{ data: profile, error: profileError }, { data, error }] = await Promise.all([
+        supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle(),
+        supabase
+          .from('installments')
+          .select('id, short_id, title, type, installment_items(id, status, due_date, amount)')
+          .order('title', { ascending: true }),
+      ]);
+
+      if (profileError) {
+        console.error('Failed to load dashboard profile name', profileError);
+      }
+
+      const greetingName = getGreetingName(profile?.display_name)
+        ?? getGreetingName(user.user_metadata?.full_name)
+        ?? getGreetingName(user.user_metadata?.name)
+        ?? getGreetingName(user.email?.split('@')[0]);
+      setProfileName(greetingName);
 
       if (error) {
         console.error('Failed to load installments', error);
@@ -55,6 +96,7 @@ function HomePageContent() {
     };
 
     fetchData();
+    return () => window.clearInterval(greetingInterval);
   }, [router]);
 
   const ongoingInstallments = useMemo(
@@ -64,14 +106,6 @@ function HomePageContent() {
       ),
     [installments]
   );
-
-  useEffect(() => {
-    const focusId = searchParams.get('focus');
-    if (!focusId || loading) return;
-    window.requestAnimationFrame(() => {
-      document.getElementById(`installment-${focusId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
-  }, [loading, searchParams]);
 
   const countBadge = (count: number) => (
     <span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent">
@@ -98,13 +132,20 @@ function HomePageContent() {
     return null;
   };
 
+  const GreetingIcon = greeting.Icon;
+
   return (
     <main className="min-h-screen bg-bg px-4 py-6 text-ink sm:py-10">
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-ink-muted">Installments</p>
-            <h1 className="text-3xl font-semibold sm:text-4xl">Your plans</h1>
+          <div className="flex min-w-0 items-center gap-4">
+            <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-accent shadow-sm sm:h-14 sm:w-14">
+              <GreetingIcon className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden="true" />
+            </span>
+            <h1 className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-3xl font-semibold leading-tight sm:text-4xl">
+              <span className="text-ink">{greeting.label}{profileName ? ',' : ''}</span>
+              {profileName ? <span className="break-words text-accent">{profileName}</span> : null}
+            </h1>
           </div>
         </div>
 
@@ -118,6 +159,16 @@ function HomePageContent() {
                   <Skeleton className="h-14 w-full" />
                   <Skeleton className="h-14 w-full" />
                   <Skeleton className="h-14 w-full" />
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-3">
+                  <div>
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="mt-2 h-4 w-24" />
+                  </div>
+                  <div>
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="mt-2 h-4 w-24" />
+                  </div>
                 </div>
               </div>
             ))}
@@ -155,11 +206,18 @@ function HomePageContent() {
                 ongoingInstallments.map((installment) => {
                   const unpaidCount = installment.installment_items.filter((item) => item.status === 'unpaid').length;
                   const paidCount = installment.installment_items.filter((item) => item.status === 'paid').length;
+                  const paidAmount = installment.installment_items.reduce(
+                    (total, item) => item.status === 'paid' ? total + Number(item.amount) : total,
+                    0
+                  );
+                  const remainingAmount = installment.installment_items.reduce(
+                    (total, item) => item.status === 'unpaid' ? total + Number(item.amount) : total,
+                    0
+                  );
                   return (
                     <Link
                       key={installment.id}
-                      id={`installment-${installment.id}`}
-                      href={`/${installment.id}?returnTo=${encodeURIComponent(`/?focus=${installment.id}`)}`}
+                      href={getInstallmentDetailsUrl(installment.short_id)}
                       className="group block card p-6 transition hover:shadow-md hover:border-accent"
                     >
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -174,6 +232,10 @@ function HomePageContent() {
                           </span>
                         </div>
                       </div>
+                      <InstallmentCardPaymentTotals
+                        paidAmount={paidAmount}
+                        remainingAmount={remainingAmount}
+                      />
                     </Link>
                   );
                 })
@@ -204,6 +266,16 @@ function HomePageFallback() {
                 <Skeleton className="h-14 w-full" />
                 <Skeleton className="h-14 w-full" />
               </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-3">
+                <div>
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="mt-2 h-4 w-24" />
+                </div>
+                <div>
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="mt-2 h-4 w-24" />
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -219,4 +291,3 @@ export default function HomePage() {
     </Suspense>
   );
 }
-

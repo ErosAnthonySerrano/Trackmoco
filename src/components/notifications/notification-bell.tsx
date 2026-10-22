@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button, useToast } from '@/components/ui';
 import { Modal } from '@/components/ui/modal';
 import { createClient } from '@/lib/supabase/client';
+import { getInstallmentDetailsUrl } from '@/lib/utils/installment-url';
 
 type NotificationPayload = {
   installment_id: string;
@@ -347,19 +348,20 @@ export function NotificationBell() {
     }
 
     if (notification.payload.installment_id) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('installments')
-        .select('id')
+        .select('id, short_id')
         .eq('id', notification.payload.installment_id)
         .maybeSingle();
-      if (!data) {
+      if (error) {
+        console.error('Failed to resolve notification installment', error);
+        return;
+      }
+      if (!data?.short_id) {
         setUnavailableIds((current) => [...current, notification.id]);
         return;
       }
-    }
-
-    if (notification.payload.installment_id) {
-      router.push(`/${notification.payload.installment_id}`);
+      router.push(getInstallmentDetailsUrl(data.short_id));
     }
   };
 
