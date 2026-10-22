@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { ArrowRight, CheckCircle2, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -72,7 +73,7 @@ export default function SignupPage() {
       <div className="relative mx-auto grid min-h-[calc(100svh-3rem)] w-full max-w-5xl items-center gap-10 lg:grid-cols-[1fr_26rem] lg:gap-20">
         <section className="hidden lg:block">
           <div className="mb-8 flex items-center gap-3">
-            <img src="/icons/icon-192.svg" alt="" className="h-12 w-12 rounded-2xl shadow-sm" />
+            <Image src="/icons/apple-touch-icon.png" alt="" width={180} height={180} className="h-12 w-12 rounded-2xl shadow-sm" />
             <span className="font-heading text-2xl font-semibold tracking-tight">Trackmoco</span>
           </div>
           <p className="max-w-xl text-5xl font-semibold leading-[1.05] tracking-tight text-ink">Start keeping every payment on track.</p>
@@ -89,7 +90,7 @@ export default function SignupPage() {
 
         <section className="w-full rounded-4xl border border-line bg-surface p-6 shadow-xl shadow-ink/5 sm:p-9">
           <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <img src="/icons/icon-192.svg" alt="" className="h-10 w-10 rounded-xl" />
+            <Image src="/icons/apple-touch-icon.png" alt="" width={180} height={180} className="h-10 w-10 rounded-xl" />
             <span className="font-heading text-xl font-semibold tracking-tight">Trackmoco</span>
           </div>
           <div className="mb-8">

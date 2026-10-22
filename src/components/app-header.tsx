@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { CalendarClock, Home, Plus } from 'lucide-react';
@@ -109,8 +110,7 @@ export function AppHeader() {
       <div className="flex justify-center px-4 sm:px-0">
         <div className="flex h-14 w-full max-w-6xl items-center justify-between sm:h-auto sm:py-3">
           <Link href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-ink transition hover:text-accent">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icons/icon-192.svg" alt="" className="h-8 w-8 rounded-lg" />
+            <Image src="/icons/apple-touch-icon.png" alt="" width={180} height={180} className="h-8 w-8 rounded-lg" />
             <span>Trackmoco</span>
           </Link>
           <div className="hidden items-center justify-end gap-3 sm:flex">
