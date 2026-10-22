@@ -6,7 +6,7 @@ This spec captures two requested changes to the installment detail page:
 - Replace or shorten the full installment ID currently shown in the detail-page URL.
 
 Implementation decisions:
-- Sum paid item amounts for **Total paid** and unpaid item amounts for **Remaining to pay**.
+- Sum paid item amounts for **Total paid** and unpaid item amounts for **Remaining balance**.
 - Place the two-card summary below the installment heading and before the item tabs.
 - Use an eight-character, randomly generated short ID stored uniquely on each installment, in the route `/installment-details/[id]`.
 - Permanently redirect legacy `/{uuid}` URLs to the new path, dropping legacy query parameters.
@@ -15,8 +15,8 @@ Implementation decisions:
 
 ### Requested content
 Show two amounts for the installment currently open:
-- **Total amount paid**
-- **Remaining amount to pay**
+- **Total paid**
+- **Remaining balance**
 
 Use the existing PHP currency convention and the project’s token-based UI patterns (SPEC-11, SPEC-17).
 

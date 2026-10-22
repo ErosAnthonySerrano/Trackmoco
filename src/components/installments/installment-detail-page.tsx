@@ -223,13 +223,13 @@ export function InstallmentDetailPage({ shortId }: { shortId: string }) {
           <div className="space-y-8">
             <section className="grid gap-4 sm:grid-cols-2" aria-label="Installment payment summary">
               <div className="card p-5">
-                <p className="text-sm font-medium text-ink-muted">Total amount paid</p>
+                <p className="text-sm font-medium text-ink-muted">Total paid</p>
                 <p className="mt-3 text-2xl font-bold text-success">
                   {formatAmount(paidItems.reduce((total, item) => total + Number(item.amount), 0))}
                 </p>
               </div>
               <div className="card p-5">
-                <p className="text-sm font-medium text-ink-muted">Remaining to pay</p>
+                <p className="text-sm font-medium text-ink-muted">Remaining balance</p>
                 <p className="mt-3 text-2xl font-bold text-ink">
                   {formatAmount(inProgress.reduce((total, item) => total + Number(item.amount), 0))}
                 </p>
