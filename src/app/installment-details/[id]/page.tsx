@@ -10,7 +10,7 @@ type InstallmentDetailsRouteProps = {
 export default async function InstallmentDetailsRoute({ params }: InstallmentDetailsRouteProps) {
   const { id } = await params;
   if (isInstallmentShortId(id)) {
-    return <InstallmentDetailPage shortId={id} />;
+    return <InstallmentDetailPage key={id} shortId={id} />;
   }
 
   const legacyUuid = decodeLegacyInstallmentId(id);

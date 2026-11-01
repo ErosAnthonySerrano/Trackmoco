@@ -51,10 +51,6 @@ export function InstallmentDetailPage({ shortId }: { shortId: string }) {
   useEffect(() => {
     if (!shortId) return;
 
-    setInstallmentId('');
-    setInstallment(null);
-    setLoading(true);
-
     const fetchInstallment = async () => {
       const supabase = createClient();
       const sessionResult = await supabase.auth.getSession();
@@ -107,7 +103,13 @@ export function InstallmentDetailPage({ shortId }: { shortId: string }) {
     fetchInstallment();
   }, [shortId, router]);
 
-  const items = useMemo(() => installment?.installment_items ?? [], [installment?.installment_items]);
+  const items = useMemo(
+    () => [...(installment?.installment_items ?? [])].sort((left, right) => (
+      left.due_date.localeCompare(right.due_date)
+      || (left.sequence_index ?? 0) - (right.sequence_index ?? 0)
+    )),
+    [installment?.installment_items]
+  );
   const inProgress = useMemo(() => items.filter((item) => item.status === 'unpaid'), [items]);
   const paidItems = useMemo(() => items.filter((item) => item.status === 'paid'), [items]);
 
