@@ -318,6 +318,7 @@ export function ItemEditModal({
 
     setDraftItemId(null);
     onSave({ ...item, due_date: dueDate, amount, status });
+    handleClose();
     toast({ title: 'Saved', description: 'Item updated successfully.', variant: 'success' });
   };
 
