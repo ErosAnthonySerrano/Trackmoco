@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowRight, Banknote, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { createClient } from '@/lib/supabase/client';
+import { MEMBERSHIP_CHANGED_EVENT } from '@/lib/utils/membership-events';
 import { Skeleton } from '@/components/ui';
 import { ItemQuickEdit } from '@/components/installments/item-quick-edit';
 
@@ -172,7 +173,9 @@ export function DashboardSummary() {
       setLoading(false);
     };
 
+    window.addEventListener(MEMBERSHIP_CHANGED_EVENT, loadSummary);
     loadSummary();
+    return () => window.removeEventListener(MEMBERSHIP_CHANGED_EVENT, loadSummary);
   }, []);
 
   if (loading) {

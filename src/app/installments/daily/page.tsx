@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { allocateAmount, getDailyRange, toIsoDate } from '@/components/installments/installment-utils';
 import { BackButton, Button } from '@/components/ui';
+import { sanitizeMoneyInput } from '@/lib/utils/numeric-input';
 
 const today = toIsoDate(new Date());
 
@@ -156,7 +157,7 @@ export default function DailyInstallmentPage() {
                 type="text"
                 inputMode="decimal"
                 value={amount}
-                onChange={(event) => { setAmount(event.target.value); setPaymentAmounts([]); }}
+                onChange={(event) => { setAmount(sanitizeMoneyInput(event.target.value)); setPaymentAmounts([]); }}
                 required
                 className="min-w-0 flex-1 rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
                 placeholder="0.00"

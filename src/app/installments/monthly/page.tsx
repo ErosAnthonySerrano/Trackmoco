@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { getFixedMonthlyDates, getMonthRows, getMonthLabel, getScheduleDateError } from '@/components/installments/installment-utils';
 import { BackButton, Button, Select } from '@/components/ui';
+import { sanitizeMoneyInput, sanitizeWholeNumberInput } from '@/lib/utils/numeric-input';
 
 const today = new Date();
 const defaultStartMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
@@ -58,7 +59,7 @@ export default function MonthlyInstallmentPage() {
   const allSet = dates.length === monthCountValue && dates.every(Boolean);
   const dateError = allSet ? getScheduleDateError(dates) : null;
   const amountValue = Number(calculatedAmount || amount);
-  const hasError = !title.trim() || amountValue <= 0 || !Number.isFinite(amountValue) || !Number.isInteger(monthCountValue) || monthCountValue < 1 || paymentAmounts.length !== monthCountValue || !allSet || Boolean(dateError);
+  const hasError = !title.trim() || amountValue <= 0 || !Number.isFinite(amountValue) || !Number.isInteger(monthCountValue) || monthCountValue < 1 || monthCountValue > 120 || paymentAmounts.length !== monthCountValue || !allSet || Boolean(dateError);
 
   const handleCalculateAmount = () => {
     const totalAmount = Number(amount);
@@ -80,7 +81,7 @@ export default function MonthlyInstallmentPage() {
   };
 
   const handleMonthCountChange = (value: string) => {
-    setMonthCount(value);
+    setMonthCount(sanitizeWholeNumberInput(value));
     setCalculatedAmount('');
     setPaymentAmounts([]);
   };
@@ -186,7 +187,7 @@ export default function MonthlyInstallmentPage() {
                   pattern="[0-9]*([.][0-9]{1,2})?"
                   value={amount}
                   onChange={(event) => {
-                    setAmount(event.target.value);
+                    setAmount(sanitizeMoneyInput(event.target.value));
                     setCalculatedAmount('');
                   }}
                   required
@@ -213,9 +214,10 @@ export default function MonthlyInstallmentPage() {
             <label className="block text-sm font-medium text-ink-muted">
               Number of months
               <input
-                type="number"
-                min="1"
-                max="120"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={3}
                 value={monthCount}
                 onChange={(event) => handleMonthCountChange(event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"

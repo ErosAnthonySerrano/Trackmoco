@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { allocateAmount, getScheduleDateError, getWeekDate, toIsoDate } from '@/components/installments/installment-utils';
 import { BackButton, Button } from '@/components/ui';
+import { sanitizeMoneyInput, sanitizeWholeNumberInput } from '@/lib/utils/numeric-input';
 
 const today = toIsoDate(new Date());
 
@@ -67,7 +68,7 @@ export default function WeeklyInstallmentPage() {
   const allDatesSet = dates.length === weekCountValue && dates.every(Boolean);
   const dateError = allDatesSet ? getScheduleDateError(dates) : null;
   const amountValue = Number(amount);
-  const hasError = !title.trim() || amountValue <= 0 || !Number.isFinite(amountValue) || !Number.isInteger(weekCountValue) || weekCountValue < 1 || paymentAmounts.length !== weekCountValue || !allDatesSet || Boolean(dateError);
+  const hasError = !title.trim() || amountValue <= 0 || !Number.isFinite(amountValue) || !Number.isInteger(weekCountValue) || weekCountValue < 1 || weekCountValue > 104 || paymentAmounts.length !== weekCountValue || !allDatesSet || Boolean(dateError);
   const handleCalculateAmount = () => setPaymentAmounts(allocateAmount(amountValue, weekCountValue));
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -161,7 +162,7 @@ export default function WeeklyInstallmentPage() {
                 type="text"
                 inputMode="decimal"
                 value={amount}
-                onChange={(event) => { setAmount(event.target.value); setPaymentAmounts([]); }}
+                onChange={(event) => { setAmount(sanitizeMoneyInput(event.target.value)); setPaymentAmounts([]); }}
                 required
                 className="min-w-0 flex-1 rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
                 placeholder="0.00"
@@ -179,11 +180,12 @@ export default function WeeklyInstallmentPage() {
             <label className="block text-sm font-medium text-ink-muted">
               Number of weeks
               <input
-                type="number"
-                min="1"
-                max="104"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={3}
                 value={weekCount}
-                onChange={(event) => { setWeekCount(event.target.value); setPaymentAmounts([]); }}
+                onChange={(event) => { setWeekCount(sanitizeWholeNumberInput(event.target.value)); setPaymentAmounts([]); }}
                 className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
               />
             </label>

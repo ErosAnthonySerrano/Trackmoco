@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { allocateAmount, getFixedYearlyDates, getScheduleDateError, getYearLabel } from '@/components/installments/installment-utils';
 import { BackButton, Button, Select } from '@/components/ui';
+import { sanitizeMoneyInput, sanitizeWholeNumberInput } from '@/lib/utils/numeric-input';
 
 const today = new Date();
 const defaultStartYear = today.getFullYear();
@@ -13,21 +14,23 @@ export default function YearlyInstallmentPage() {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [yearCount, setYearCount] = useState('3');
-  const [startYear, setStartYear] = useState(defaultStartYear);
+  const [startYear, setStartYear] = useState(String(defaultStartYear));
   const [amount, setAmount] = useState('');
   const [paymentAmounts, setPaymentAmounts] = useState<number[]>([]);
   const [sameDate, setSameDate] = useState(true);
   const [month, setMonth] = useState(today.getMonth() + 1);
-  const [day, setDay] = useState(today.getDate());
+  const [day, setDay] = useState(String(today.getDate()));
   const [manualDates, setManualDates] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const yearCountValue = Number(yearCount);
+  const startYearValue = Number(startYear);
+  const dayValue = Number(day);
 
   const autoDates = useMemo(() => {
     if (!sameDate) return [];
-    return getFixedYearlyDates(startYear, yearCountValue, month, day);
-  }, [sameDate, startYear, yearCountValue, month, day]);
+    return getFixedYearlyDates(startYearValue, yearCountValue, month, dayValue);
+  }, [sameDate, startYearValue, yearCountValue, month, dayValue]);
 
   useEffect(() => {
     if (!sameDate) {
@@ -51,12 +54,12 @@ export default function YearlyInstallmentPage() {
     }
   };
 
-  const years = Array.from({ length: yearCountValue }, (_, index) => startYear + index);
+  const years = Array.from({ length: yearCountValue }, (_, index) => startYearValue + index);
   const dates = sameDate ? autoDates : manualDates;
   const allSet = dates.length === yearCountValue && dates.every(Boolean);
   const dateError = allSet ? getScheduleDateError(dates) : null;
   const amountValue = Number(amount);
-  const hasError = !title.trim() || amountValue <= 0 || !Number.isFinite(amountValue) || !Number.isInteger(yearCountValue) || yearCountValue < 1 || paymentAmounts.length !== yearCountValue || !allSet || Boolean(dateError);
+  const hasError = !title.trim() || amountValue <= 0 || !Number.isFinite(amountValue) || !Number.isInteger(yearCountValue) || yearCountValue < 1 || yearCountValue > 50 || !Number.isInteger(startYearValue) || startYearValue < 1900 || startYearValue > 2100 || !Number.isInteger(dayValue) || dayValue < 1 || dayValue > 31 || paymentAmounts.length !== yearCountValue || !allSet || Boolean(dateError);
   const handleCalculateAmount = () => setPaymentAmounts(allocateAmount(amountValue, yearCountValue));
 
   const handleManualChange = (index: number, value: string) => {
@@ -158,7 +161,7 @@ export default function YearlyInstallmentPage() {
                 type="text"
                 inputMode="decimal"
                 value={amount}
-                onChange={(event) => { setAmount(event.target.value); setPaymentAmounts([]); }}
+                onChange={(event) => { setAmount(sanitizeMoneyInput(event.target.value)); setPaymentAmounts([]); }}
                 required
                 className="min-w-0 flex-1 rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
                 placeholder="0.00"
@@ -176,22 +179,24 @@ export default function YearlyInstallmentPage() {
             <label className="block text-sm font-medium text-ink-muted">
               Number of years
               <input
-                type="number"
-                min="1"
-                max="50"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={2}
                 value={yearCount}
-                onChange={(event) => { setYearCount(event.target.value); setPaymentAmounts([]); }}
+                onChange={(event) => { setYearCount(sanitizeWholeNumberInput(event.target.value)); setPaymentAmounts([]); }}
                 className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
               />
             </label>
             <label className="block text-sm font-medium text-ink-muted">
               Start year
               <input
-                type="number"
-                min="1900"
-                max="2100"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={4}
                 value={startYear}
-                onChange={(event) => setStartYear(Number(event.target.value))}
+                onChange={(event) => setStartYear(sanitizeWholeNumberInput(event.target.value))}
                 className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
               />
             </label>
@@ -225,11 +230,12 @@ export default function YearlyInstallmentPage() {
                 <label className="block text-sm font-medium text-ink-muted">
                   Day
                   <input
-                    type="number"
-                    min="1"
-                    max="31"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={2}
                     value={day}
-                    onChange={(event) => setDay(Number(event.target.value))}
+                    onChange={(event) => setDay(sanitizeWholeNumberInput(event.target.value))}
                     className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
                   />
                 </label>

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { BackButton, Select, Skeleton } from '@/components/ui';
 import { createClient } from '@/lib/supabase/client';
 import { getInstallmentDetailsUrl } from '@/lib/utils/installment-url';
+import { MEMBERSHIP_CHANGED_EVENT } from '@/lib/utils/membership-events';
 import { InstallmentCardPaymentTotals } from '@/components/installments/installment-card-payment-totals';
 
 type Status = 'paid' | 'unpaid';
@@ -64,7 +65,9 @@ function AllInstallmentsContent() {
       if (!error) setInstallments((data ?? []) as Installment[]);
       setLoading(false);
     };
+    window.addEventListener(MEMBERSHIP_CHANGED_EVENT, load);
     load();
+    return () => window.removeEventListener(MEMBERSHIP_CHANGED_EVENT, load);
   }, [router]);
 
   const visibleInstallments = useMemo(() => installments.filter((installment) => {

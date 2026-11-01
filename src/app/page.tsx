@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Button, Skeleton } from '@/components/ui';
 import { DashboardSummary } from '@/components/dashboard/dashboard-summary';
 import { getInstallmentDetailsUrl } from '@/lib/utils/installment-url';
+import { MEMBERSHIP_CHANGED_EVENT } from '@/lib/utils/membership-events';
 import { InstallmentCardPaymentTotals } from '@/components/installments/installment-card-payment-totals';
 
 type InstallmentItem = {
@@ -95,8 +96,12 @@ function HomePageContent() {
       setLoading(false);
     };
 
+    window.addEventListener(MEMBERSHIP_CHANGED_EVENT, fetchData);
     fetchData();
-    return () => window.clearInterval(greetingInterval);
+    return () => {
+      window.clearInterval(greetingInterval);
+      window.removeEventListener(MEMBERSHIP_CHANGED_EVENT, fetchData);
+    };
   }, [router]);
 
   const ongoingInstallments = useMemo(

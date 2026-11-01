@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, FileText, Trash2, Upload } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { sanitizeMoneyInput } from '@/lib/utils/numeric-input';
 import { useToast } from '@/components/ui';
 import { Button, Modal, Select } from '@/components/ui';
 
@@ -448,11 +449,11 @@ export function ItemEditModal({
             <label className="block text-sm font-medium text-ink-muted">
               Amount
               <input
-                type="number"
-                min="0"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9]*([.][0-9]{1,2})?"
                 value={amount}
-                onChange={(event) => updateDraft({ amount: event.target.value })}
+                onChange={(event) => updateDraft({ amount: sanitizeMoneyInput(event.target.value) })}
                 disabled={!canEdit}
                 className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
               />

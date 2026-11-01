@@ -6,6 +6,7 @@ import { differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, CalendarClock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { MEMBERSHIP_CHANGED_EVENT } from '@/lib/utils/membership-events';
 import { BackButton, Skeleton } from '@/components/ui';
 import { ItemQuickEdit } from '@/components/installments/item-quick-edit';
 import { getInstallmentDetailsUrl } from '@/lib/utils/installment-url';
@@ -78,7 +79,9 @@ export default function UpcomingPage() {
       setLoading(false);
     };
 
+    window.addEventListener(MEMBERSHIP_CHANGED_EVENT, loadUpcoming);
     loadUpcoming();
+    return () => window.removeEventListener(MEMBERSHIP_CHANGED_EVENT, loadUpcoming);
   }, [router]);
 
   const groups = useMemo<UpcomingGroup[]>(() => {

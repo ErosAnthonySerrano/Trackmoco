@@ -7,6 +7,7 @@ import { Button, useToast } from '@/components/ui';
 import { Modal } from '@/components/ui/modal';
 import { createClient } from '@/lib/supabase/client';
 import { getInstallmentDetailsUrl } from '@/lib/utils/installment-url';
+import { MEMBERSHIP_CHANGED_EVENT } from '@/lib/utils/membership-events';
 
 type NotificationPayload = {
   installment_id: string;
@@ -85,7 +86,7 @@ interface InviteResponseModalProps {
   open: boolean;
   notification: NotificationRow | null;
   onClose: () => void;
-  onAction: () => void;
+  onAction: (action: 'accept' | 'reject' | 'block_sender') => void;
 }
 
 function InviteResponseModal({ open, notification, onClose, onAction }: InviteResponseModalProps) {
@@ -121,7 +122,7 @@ function InviteResponseModal({ open, notification, onClose, onAction }: InviteRe
             : 'Invitation rejected',
       variant: 'success',
     });
-    onAction();
+    onAction(action);
     onClose();
   };
 
@@ -365,8 +366,11 @@ export function NotificationBell() {
     }
   };
 
-  const handleInviteAction = () => {
+  const handleInviteAction = (action: 'accept' | 'reject' | 'block_sender') => {
     setNotifications((current) => current.filter((n) => n.id !== selectedNotification?.id));
+    if (action === 'accept') {
+      window.dispatchEvent(new Event(MEMBERSHIP_CHANGED_EVENT));
+    }
   };
 
   return (

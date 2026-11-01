@@ -1,0 +1,1 @@
+export const MEMBERSHIP_CHANGED_EVENT = 'trackmoco:membership-changed';

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { Button, Modal, Select, useToast } from '@/components/ui';
+import { sanitizeMoneyInput, sanitizeWholeNumberInput } from '@/lib/utils/numeric-input';
 
 type ScheduleType = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
@@ -121,7 +122,7 @@ export function InstallmentEditModal({
       setError('Choose a due day from 1 to 31, or last day of month.');
       return;
     }
-    if (values.scheduleType === 'yearly' && (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31 || !Number.isInteger(startYear) || yearMonth < 1 || yearMonth > 12)) {
+    if (values.scheduleType === 'yearly' && (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31 || !Number.isInteger(startYear) || startYear < 1900 || startYear > 2200 || yearMonth < 1 || yearMonth > 12)) {
       setError('Choose a valid yearly month and due day.');
       return;
     }
@@ -203,12 +204,11 @@ export function InstallmentEditModal({
         <label className="block text-sm font-medium text-ink-muted">
           Total amount for unpaid payments
           <input
-            type="number"
-            min="0.01"
-            step="0.01"
+            type="text"
             inputMode="decimal"
+            pattern="[0-9]*([.][0-9]{1,2})?"
             value={values.amount}
-            onChange={(event) => updateValue('amount', event.target.value)}
+            onChange={(event) => updateValue('amount', sanitizeMoneyInput(event.target.value))}
             className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"
             required
           />
@@ -257,11 +257,12 @@ export function InstallmentEditModal({
             <label className="block text-sm font-medium text-ink-muted">
               Number of weeks
               <input
-                type="number"
-                min="1"
-                max="500"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={3}
                 value={values.scheduleCount}
-                onChange={(event) => updateValue('scheduleCount', event.target.value)}
+                onChange={(event) => updateValue('scheduleCount', sanitizeWholeNumberInput(event.target.value))}
                 className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"
                 required
               />
@@ -274,11 +275,12 @@ export function InstallmentEditModal({
                 <label className="block text-sm font-medium text-ink-muted">
                   Number of months
                   <input
-                    type="number"
-                    min="1"
-                    max="500"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={3}
                     value={values.scheduleCount}
-                    onChange={(event) => updateValue('scheduleCount', event.target.value)}
+                    onChange={(event) => updateValue('scheduleCount', sanitizeWholeNumberInput(event.target.value))}
                     className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"
                     required
                   />
@@ -315,11 +317,12 @@ export function InstallmentEditModal({
                 <label className="block text-sm font-medium text-ink-muted">
                   Number of years
                   <input
-                    type="number"
-                    min="1"
-                    max="500"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={3}
                     value={values.scheduleCount}
-                    onChange={(event) => updateValue('scheduleCount', event.target.value)}
+                    onChange={(event) => updateValue('scheduleCount', sanitizeWholeNumberInput(event.target.value))}
                     className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"
                     required
                   />
@@ -327,11 +330,12 @@ export function InstallmentEditModal({
                 <label className="block text-sm font-medium text-ink-muted">
                   Start year
                   <input
-                    type="number"
-                    min="1900"
-                    max="2200"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={4}
                     value={values.startYear}
-                    onChange={(event) => updateValue('startYear', event.target.value)}
+                    onChange={(event) => updateValue('startYear', sanitizeWholeNumberInput(event.target.value))}
                     className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"
                     required
                   />
@@ -350,11 +354,12 @@ export function InstallmentEditModal({
                 <label className="block text-sm font-medium text-ink-muted">
                   Due day
                   <input
-                    type="number"
-                    min="1"
-                    max="31"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={2}
                     value={values.dueDay}
-                    onChange={(event) => updateValue('dueDay', event.target.value)}
+                    onChange={(event) => updateValue('dueDay', sanitizeWholeNumberInput(event.target.value))}
                     className="mt-2 w-full rounded-2xl border border-line bg-bg px-4 py-3 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft"
                     required
                   />

@@ -103,7 +103,7 @@ export function AppHeader() {
     return pathname === route || pathname.startsWith(`${route}/`);
   };
 
-  const navLinkClass = (route: string) => `inline-flex rounded-2xl border px-4 py-3 text-sm font-semibold transition ${isActive(route) ? 'border-accent bg-accent-soft text-ink' : 'border-line bg-surface text-ink hover:bg-accent-soft'}`;
+  const navLinkClass = (route: string) => `rounded-2xl border px-4 py-3 text-sm font-semibold transition ${isActive(route) ? 'border-accent bg-accent-soft text-ink' : 'border-line bg-surface text-ink hover:bg-accent-soft'}`;
   const bottomNavClass = (route: string) => `mobile-bottom-nav__item ${isActive(route) ? 'mobile-bottom-nav__item--active' : ''}`;
 
   return (
@@ -115,16 +115,18 @@ export function AppHeader() {
             <Image src={theme === 'dark' ? '/icons/app-logo-white.png' : '/icons/app-logo-black.png'} alt="" width={360} height={180} className="h-8 w-auto object-contain" />
             <span>Trackmoco</span>
           </Link>
-          <div className="hidden items-center justify-end gap-3 sm:flex">
+          <div className="flex items-center justify-end gap-3">
             <NotificationBell />
-            <ThemeToggle />
-            <Link href="/installments/all" aria-current={isActive('/installments/all') ? 'page' : undefined} className={navLinkClass('/installments/all')}>
+            <div className="hidden sm:block">
+              <ThemeToggle />
+            </div>
+            <Link href="/installments/all" aria-current={isActive('/installments/all') ? 'page' : undefined} className={`hidden sm:inline-flex ${navLinkClass('/installments/all')}`}>
               Installments
             </Link>
-            <Link href="/installments" aria-current={isActive('/installments') ? 'page' : undefined} className={navLinkClass('/installments')}>
+            <Link href="/installments" aria-current={isActive('/installments') ? 'page' : undefined} className={`hidden sm:inline-flex ${navLinkClass('/installments')}`}>
               Add installment
             </Link>
-            <div ref={profileMenuRef} className="relative">
+            <div ref={profileMenuRef} className="relative hidden sm:block">
               <button
                 type="button"
                 aria-label={`Open account menu for ${profileName}`}
