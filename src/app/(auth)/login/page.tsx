@@ -1,28 +1,36 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight, CheckCircle2, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui';
+import { useTheme } from '@/components/theme-provider';
 
 const supabase = createClient();
 
+function CallbackErrorNotice({ dismissed }: { dismissed: boolean }) {
+  const callbackError = useSearchParams().get('error');
+
+  if (dismissed || !callbackError) return null;
+
+  return <p className="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger">{callbackError}</p>;
+}
+
 export default function LoginPage() {
   const router = useRouter();
+  const { theme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [callbackErrorDismissed, setCallbackErrorDismissed] = useState(false);
 
   useEffect(() => {
-    const callbackError = new URLSearchParams(window.location.search).get('error');
-    if (callbackError) setError(callbackError);
-
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
         router.replace('/');
@@ -32,6 +40,7 @@ export default function LoginPage() {
 
   const handlePasswordLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setCallbackErrorDismissed(true);
     setLoading(true);
     setError(null);
     setMessage(null);
@@ -54,12 +63,14 @@ export default function LoginPage() {
   };
 
   const handleGoogle = async () => {
+    setCallbackErrorDismissed(true);
     setLoading(true);
     setError(null);
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: { prompt: 'select_account' },
       },
     });
     setLoading(false);
@@ -75,7 +86,7 @@ export default function LoginPage() {
       <div className="relative mx-auto grid min-h-[calc(100svh-3rem)] w-full max-w-5xl items-center gap-10 lg:grid-cols-[1fr_26rem] lg:gap-20">
         <section className="hidden lg:block">
           <div className="mb-8 flex items-center gap-3">
-            <Image src="/icons/apple-touch-icon.png" alt="" width={180} height={180} className="h-12 w-12 rounded-2xl shadow-sm" />
+            <Image src={theme === 'dark' ? '/icons/app-logo-white.png' : '/icons/app-logo-black.png'} alt="" width={360} height={180} className="h-12 w-auto object-contain" />
             <span className="font-heading text-2xl font-semibold tracking-tight">Trackmoco</span>
           </div>
           <p className="max-w-xl text-5xl font-semibold leading-[1.05] tracking-tight text-ink">
@@ -96,7 +107,7 @@ export default function LoginPage() {
 
         <section className="w-full rounded-4xl border border-line bg-surface p-6 shadow-xl shadow-ink/5 sm:p-9">
           <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <Image src="/icons/apple-touch-icon.png" alt="" width={180} height={180} className="h-10 w-10 rounded-xl" />
+            <Image src={theme === 'dark' ? '/icons/app-logo-white.png' : '/icons/app-logo-black.png'} alt="" width={360} height={180} className="h-10 w-auto object-contain" />
             <span className="font-heading text-xl font-semibold tracking-tight">Trackmoco</span>
           </div>
           <div className="mb-8">
@@ -140,6 +151,9 @@ export default function LoginPage() {
             </label>
             {message && <p className="rounded-2xl bg-success-soft px-4 py-3 text-sm text-success">{message}</p>}
             {error && <p className="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>}
+            <Suspense fallback={null}>
+              <CallbackErrorNotice dismissed={callbackErrorDismissed} />
+            </Suspense>
             <Button type="submit" isLoading={loading} className="w-full py-3.5">
               Sign in with password <ArrowRight className="h-4 w-4" />
             </Button>

@@ -9,10 +9,12 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useTheme } from '@/components/theme-provider';
 
 export function AppHeader() {
   const router = useRouter();
   const pathname = usePathname();
+  const { theme } = useTheme();
   const [authenticated, setAuthenticated] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -110,7 +112,7 @@ export function AppHeader() {
       <div className="flex justify-center px-4 sm:px-0">
         <div className="flex h-14 w-full max-w-6xl items-center justify-between sm:h-auto sm:py-3">
           <Link href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-ink transition hover:text-accent">
-            <Image src="/icons/apple-touch-icon.png" alt="" width={180} height={180} className="h-8 w-8 rounded-lg" />
+            <Image src={theme === 'dark' ? '/icons/app-logo-white.png' : '/icons/app-logo-black.png'} alt="" width={360} height={180} className="h-8 w-auto object-contain" />
             <span>Trackmoco</span>
           </Link>
           <div className="hidden items-center justify-end gap-3 sm:flex">

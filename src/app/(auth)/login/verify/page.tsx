@@ -6,11 +6,13 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, KeyRound } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui';
+import { useTheme } from '@/components/theme-provider';
 
 const supabase = createClient();
 
 export default function VerifyPage() {
   const router = useRouter();
+  const { theme } = useTheme();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +95,7 @@ export default function VerifyPage() {
         <div className="grid w-full max-w-4xl items-center gap-10 lg:grid-cols-[0.9fr_26rem] lg:gap-20">
           <section className="hidden lg:block">
             <div className="mb-8 flex items-center gap-3">
-              <Image src="/icons/apple-touch-icon.png" alt="" width={180} height={180} className="h-12 w-12 rounded-2xl shadow-sm" />
+              <Image src={theme === 'dark' ? '/icons/app-logo-white.png' : '/icons/app-logo-black.png'} alt="" width={360} height={180} className="h-12 w-auto object-contain" />
               <span className="font-heading text-2xl font-semibold tracking-tight">Trackmoco</span>
             </div>
             <p className="max-w-md text-4xl font-semibold leading-tight tracking-tight">A small step, then you are back on track.</p>
@@ -102,7 +104,7 @@ export default function VerifyPage() {
 
           <section className="w-full rounded-4xl border border-line bg-surface p-6 shadow-xl shadow-ink/5 sm:p-9">
             <div className="mb-8 flex items-center gap-3 lg:hidden">
-              <Image src="/icons/apple-touch-icon.png" alt="" width={180} height={180} className="h-10 w-10 rounded-xl" />
+              <Image src={theme === 'dark' ? '/icons/app-logo-white.png' : '/icons/app-logo-black.png'} alt="" width={360} height={180} className="h-10 w-auto object-contain" />
               <span className="font-heading text-xl font-semibold tracking-tight">Trackmoco</span>
             </div>
             <button type="button" onClick={() => router.push('/login')} className="mb-7 inline-flex items-center gap-2 text-sm font-semibold text-ink-muted transition hover:text-ink">

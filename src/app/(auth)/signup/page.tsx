@@ -7,11 +7,13 @@ import { ArrowRight, CheckCircle2, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui';
 import { createClient } from '@/lib/supabase/client';
+import { useTheme } from '@/components/theme-provider';
 
 const supabase = createClient();
 
 export default function SignupPage() {
   const router = useRouter();
+  const { theme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -73,7 +75,7 @@ export default function SignupPage() {
       <div className="relative mx-auto grid min-h-[calc(100svh-3rem)] w-full max-w-5xl items-center gap-10 lg:grid-cols-[1fr_26rem] lg:gap-20">
         <section className="hidden lg:block">
           <div className="mb-8 flex items-center gap-3">
-            <Image src="/icons/apple-touch-icon.png" alt="" width={180} height={180} className="h-12 w-12 rounded-2xl shadow-sm" />
+            <Image src={theme === 'dark' ? '/icons/app-logo-white.png' : '/icons/app-logo-black.png'} alt="" width={360} height={180} className="h-12 w-auto object-contain" />
             <span className="font-heading text-2xl font-semibold tracking-tight">Trackmoco</span>
           </div>
           <p className="max-w-xl text-5xl font-semibold leading-[1.05] tracking-tight text-ink">Start keeping every payment on track.</p>
@@ -90,7 +92,7 @@ export default function SignupPage() {
 
         <section className="w-full rounded-4xl border border-line bg-surface p-6 shadow-xl shadow-ink/5 sm:p-9">
           <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <Image src="/icons/apple-touch-icon.png" alt="" width={180} height={180} className="h-10 w-10 rounded-xl" />
+            <Image src={theme === 'dark' ? '/icons/app-logo-white.png' : '/icons/app-logo-black.png'} alt="" width={360} height={180} className="h-10 w-auto object-contain" />
             <span className="font-heading text-xl font-semibold tracking-tight">Trackmoco</span>
           </div>
           <div className="mb-8">
